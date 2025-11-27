@@ -1,6 +1,6 @@
 
 import React, { useRef, useState } from 'react';
-import { CheckCircle, ArrowRight, Sparkles, Globe, ShieldCheck, Star, Quote, X, LayoutGrid, Briefcase, Zap, Check, Minus, Lock, Mail, MessageCircle, Upload, Loader2, Pencil } from 'lucide-react';
+import { CheckCircle, ArrowRight, Sparkles, Globe, ShieldCheck, Star, Quote, X, LayoutGrid, Briefcase, Zap, Check, Minus, Lock, Mail, MessageCircle, Upload, Loader2, Pencil, Layers } from 'lucide-react';
 import { LangCode, ResumeData } from '../types';
 import { content } from '../locales';
 import { parseResumeFromText } from '../services/geminiService';
@@ -39,6 +39,11 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onImport, lang, setLa
       try {
           // Read PDF Text
           const arrayBuffer = await file.arrayBuffer();
+          // Ensure pdfjsLib is loaded
+          if (!window.pdfjsLib) {
+              throw new Error("PDF Library not loaded");
+          }
+          
           const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           let fullText = '';
           
@@ -49,12 +54,18 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onImport, lang, setLa
               fullText += pageText + ' ';
           }
 
+          if (fullText.trim().length < 50) {
+              alert("Could not read text from this PDF. It might be an image scan. Please try a text-based PDF or enter details manually.");
+              setIsImporting(false);
+              return;
+          }
+
           // Send to AI for parsing
           const parsedData = await parseResumeFromText(fullText);
           onImport(parsedData);
       } catch (error) {
           console.error("Import Failed", error);
-          alert("Could not read PDF. Please try again or create manually.");
+          alert("Could not import PDF. Please try creating manually.");
           setIsImporting(false);
       }
   };
@@ -66,10 +77,10 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onImport, lang, setLa
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex justify-between items-center">
           <div className="flex items-center gap-2">
-             <div className="bg-slate-900 text-white p-1.5 rounded-lg">
-                <LayoutGrid size={20} />
+             <div className="bg-gradient-to-tr from-blue-600 to-indigo-600 text-white p-2 rounded-lg shadow-lg shadow-blue-500/20">
+                <Layers size={20} strokeWidth={2.5} />
              </div>
-             <span className="font-bold text-xl tracking-tight text-slate-900">JobFlow AI</span>
+             <span className="font-extrabold text-xl tracking-tight text-slate-900">JobFlow<span className="text-blue-600">.AI</span></span>
           </div>
           <div className="flex items-center gap-4">
             <div className="flex bg-slate-100 rounded-full p-1 border border-slate-200 overflow-x-auto max-w-[150px] md:max-w-none">
@@ -325,7 +336,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onImport, lang, setLa
       <footer className="bg-slate-50 border-t border-slate-200 py-12">
         <div className="max-w-7xl mx-auto px-4 text-center">
             <div className="flex items-center justify-center gap-2 mb-4 opacity-50">
-                 <LayoutGrid size={24} />
+                 <Layers size={24} />
                  <span className="font-bold text-xl tracking-tight">JobFlow AI</span>
             </div>
             <p className="text-slate-500 text-sm mb-6">
