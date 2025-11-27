@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Landing } from './components/Landing';
 import { ResumeBuilder } from './components/ResumeBuilder';
@@ -12,7 +13,12 @@ const App: React.FC = () => {
   const [resumeData, setResumeData] = useState<ResumeData>(INITIAL_RESUME_DATA);
   const [showPayment, setShowPayment] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [isPaid, setIsPaid] = useState(false);
+  
+  // Initialize Premium status from LocalStorage to remember paid users
+  const [isPaid, setIsPaid] = useState<boolean>(() => {
+    return localStorage.getItem('jobflow_is_paid') === 'true';
+  });
+
   const [lang, setLang] = useState<LangCode>('en');
   const [pendingAction, setPendingAction] = useState<'download' | 'jobs' | null>(null);
   const [hasSavedData, setHasSavedData] = useState(false);
@@ -41,6 +47,7 @@ const App: React.FC = () => {
     const query = new URLSearchParams(window.location.search);
     if (query.get('payment_success') === 'true') {
       setIsPaid(true);
+      localStorage.setItem('jobflow_is_paid', 'true'); // Save premium status
       setShowPayment(false);
       setShowSuccess(true);
       
@@ -99,6 +106,7 @@ const App: React.FC = () => {
   const handlePaymentSuccess = () => {
     setShowPayment(false);
     setIsPaid(true);
+    localStorage.setItem('jobflow_is_paid', 'true'); // Save premium status manually if triggered
     setShowSuccess(true);
     
     if (pendingAction === 'download') {
