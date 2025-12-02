@@ -6,6 +6,8 @@ import { ResumePreview } from './components/ResumePreview';
 import { PaymentModal } from './components/PaymentModal';
 import { PaymentSuccess } from './components/PaymentSuccess';
 import { JobMatcher } from './components/JobMatcher';
+import { Auth } from './components/Auth';
+import { Legal } from './components/Legal';
 import { ResumeData, INITIAL_RESUME_DATA, AppState, LangCode } from './types';
 
 const App: React.FC = () => {
@@ -13,8 +15,9 @@ const App: React.FC = () => {
   const [resumeData, setResumeData] = useState<ResumeData>(INITIAL_RESUME_DATA);
   const [showPayment, setShowPayment] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [legalType, setLegalType] = useState<'privacy' | 'terms'>('privacy');
   
-  // Initialize Premium status from LocalStorage to remember paid users
+  // Initialize Premium status
   const [isPaid, setIsPaid] = useState<boolean>(() => {
     return localStorage.getItem('jobflow_is_paid') === 'true';
   });
@@ -23,16 +26,14 @@ const App: React.FC = () => {
   const [pendingAction, setPendingAction] = useState<'download' | 'jobs' | null>(null);
   const [hasSavedData, setHasSavedData] = useState(false);
 
-  // Auto-Load from LocalStorage on Mount
+  // Auto-Load from LocalStorage
   useEffect(() => {
     const savedData = localStorage.getItem('cvforge_data');
     if (savedData) {
       try {
         const parsed = JSON.parse(savedData);
-        // Merge with initial to ensure structure updates don't break it
         const merged = { ...INITIAL_RESUME_DATA, ...parsed };
         setResumeData(merged);
-        // Check if it's actually modified from initial
         if (JSON.stringify(merged.personalInfo) !== JSON.stringify(INITIAL_RESUME_DATA.personalInfo)) {
             setHasSavedData(true);
         }
@@ -42,49 +43,36 @@ const App: React.FC = () => {
     }
   }, []);
 
-  // Check for Payment Success from Stripe Redirect
+  // Check for Payment Success
   useEffect(() => {
     const query = new URLSearchParams(window.location.search);
     if (query.get('payment_success') === 'true') {
       setIsPaid(true);
-      localStorage.setItem('jobflow_is_paid', 'true'); // Save premium status
+      localStorage.setItem('jobflow_is_paid', 'true');
       setShowPayment(false);
       setShowSuccess(true);
-      
-      // Clean the URL without reloading
       window.history.replaceState({}, document.title, window.location.pathname);
-      
-      // Optional: Navigate straight to builder or preview
       if (state === AppState.LANDING) {
         setState(AppState.PREVIEW);
       }
     }
   }, [state]);
 
-  // Auto-Save to LocalStorage whenever data changes
+  // Auto-Save
   useEffect(() => {
     if (resumeData !== INITIAL_RESUME_DATA) {
         localStorage.setItem('cvforge_data', JSON.stringify(resumeData));
     }
   }, [resumeData]);
 
-  const handleStart = () => {
-    setState(AppState.BUILDER);
-  };
-
+  const handleStart = () => setState(AppState.BUILDER);
   const handleImport = (importedData: ResumeData) => {
       setResumeData(importedData);
       setState(AppState.BUILDER);
   };
-
-  const handlePreview = () => {
-    setState(AppState.PREVIEW);
-  };
-
-  const handleBackToBuilder = () => {
-    setState(AppState.BUILDER);
-  };
-
+  const handlePreview = () => setState(AppState.PREVIEW);
+  const handleBackToBuilder = () => setState(AppState.BUILDER);
+  
   const handleDownloadClick = () => {
     if (isPaid) {
       window.print();
@@ -106,19 +94,23 @@ const App: React.FC = () => {
   const handlePaymentSuccess = () => {
     setShowPayment(false);
     setIsPaid(true);
-    localStorage.setItem('jobflow_is_paid', 'true'); // Save premium status manually if triggered
+    localStorage.setItem('jobflow_is_paid', 'true');
     setShowSuccess(true);
-    
     if (pendingAction === 'download') {
-      setTimeout(() => {
-        window.print();
-      }, 500);
+      setTimeout(() => window.print(), 500);
     } else if (pendingAction === 'jobs') {
       setState(AppState.JOBS);
     }
-    
     setPendingAction(null);
   };
+
+  // Auth & Legal Handlers
+  const handleLoginClick = () => setState(AppState.AUTH);
+  const handleLegalClick = (type: 'privacy' | 'terms') => {
+      setLegalType(type);
+      setState(AppState.LEGAL);
+  };
+  const handleLoginSuccess = () => setState(AppState.BUILDER);
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -126,11 +118,29 @@ const App: React.FC = () => {
       {state === AppState.LANDING && (
         <Landing 
             onStart={handleStart} 
+            onLogin={handleLoginClick}
+            onLegal={handleLegalClick}
             onImport={handleImport}
             lang={lang} 
             setLang={setLang} 
             hasSavedData={hasSavedData}
         />
+      )}
+
+      {state === AppState.AUTH && (
+          <Auth 
+            lang={lang} 
+            onLogin={handleLoginSuccess}
+            onBack={() => setState(AppState.LANDING)}
+          />
+      )}
+
+      {state === AppState.LEGAL && (
+          <Legal 
+            type={legalType}
+            lang={lang}
+            onBack={() => setState(AppState.LANDING)}
+          />
       )}
 
       {state === AppState.BUILDER && (
