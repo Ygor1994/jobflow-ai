@@ -3,10 +3,36 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    
+    <!-- SEO & Metatags Optimized for Benelux Market -->
+    <meta name="description" content="Build professional resumes tailored for Benelux jobs using AI in minutes. Optimized for Netherlands, Belgium, Spain & Portugal with ATS-friendly templates." />
+    <meta name="keywords" content="Benelux resume builder AI, create professional CV, CV maken, sollicitatiebrief, AI resume generator, employment Netherlands, Belgium jobs" />
+    <meta name="author" content="JobFlow AI" />
+    <meta name="robots" content="index, follow" />
+    
+    <!-- Open Graph / Social Sharing -->
+    <meta property="og:title" content="JobFlow AI - Benelux Resume Builder" />
+    <meta property="og:description" content="Create professional, ATS-friendly resumes for the European market in minutes." />
+    <meta property="og:image" content="https://jobflowai.xyz/og-image.jpg" />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://jobflowai.xyz" />
+
     <title>JobFlow AI - Benelux Premium Resume Builder</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    
+    <!-- Google Analytics (GA4) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+
+      gtag('config', 'G-XXXXXXXXXX');
+    </script>
+
     <script>
       // Initialize PDF.js worker with matching version
       window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
@@ -26,11 +52,16 @@
             },
             animation: {
               'glow': 'glow 2s ease-in-out infinite alternate',
+              'float': 'float 6s ease-in-out infinite',
             },
             keyframes: {
               glow: {
                 '0%': { boxShadow: '0 0 5px #2563eb' },
                 '100%': { boxShadow: '0 0 20px #2563eb, 0 0 10px #6366f1' },
+              },
+              float: {
+                '0%, 100%': { transform: 'translateY(0)' },
+                '50%': { transform: 'translateY(-20px)' },
               }
             }
           }
@@ -55,6 +86,9 @@
         background: rgba(0,0,0,0.2);
         border-radius: 10px;
       }
+      html {
+        scroll-behavior: smooth;
+      }
     </style>
 <script type="importmap">
 {
@@ -64,7 +98,7 @@
     "react/": "https://aistudiocdn.com/react@^19.2.0/",
     "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
     "lucide-react": "https://aistudiocdn.com/lucide-react@^0.555.0",
-    "vite": "https://aistudiocdn.com/vite@^7.2.4",
+    "vite": "https://aistudiocdn.com/vite@^7.2.6",
     "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
   }
 }
