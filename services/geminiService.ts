@@ -2,15 +2,16 @@ import { GoogleGenAI, Type } from "@google/genai";
 import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA } from "../types";
 
 const getClient = () => {
-  // Guidelines: API key must be obtained exclusively from process.env.API_KEY.
-  // We have configured vite.config.ts to inject this value.
-  const apiKey = process.env.API_KEY;
+  // CRITICAL FIX: Try multiple ways to get the key to ensure it works in all environments (Local Windows, Vercel Linux, etc)
+  const apiKey = import.meta.env.VITE_API_KEY || process.env.API_KEY;
   
   if (!apiKey) {
-    console.warn("API Key is missing. AI features will not work.");
+    console.error("CRITICAL: API Key is missing. Check .env file or Vercel Settings.");
+    // Return a dummy client that will fail gracefully instead of crashing
+    return new GoogleGenAI({ apiKey: "missing_key" });
   }
 
-  return new GoogleGenAI({ apiKey: apiKey || "dummy_key_to_prevent_crash" });
+  return new GoogleGenAI({ apiKey: apiKey });
 };
 
 const getContextByLang = (lang: LangCode) => {
@@ -48,7 +49,7 @@ export const generateSummary = async (jobTitle: string, experienceStr: string, l
     return response.text?.trim() || "";
   } catch (error) {
     console.error("Gemini Summary Error:", error);
-    return "Could not generate summary. Please check your API Key.";
+    return ""; // Fail silently so UI handles it
   }
 };
 
@@ -58,9 +59,8 @@ export const enhanceExperience = async (title: string, rawDescription: string, l
   try {
     let prompt = '';
     
-    // LOGIC UPDATE: Explicitly handle empty vs existing text
+    // Aggressive check: If description is short or empty, generate from scratch
     if (!rawDescription || rawDescription.trim().length < 5) {
-        // GENERATE FROM SCRATCH
         prompt = `You are a professional resume writer for the ${getContextByLang(lang)} market.
         The candidate has the job title: "${title}".
         They have not provided a description. 
@@ -69,7 +69,6 @@ export const enhanceExperience = async (title: string, rawDescription: string, l
         Use strong action verbs.
         Write exclusively in ${getLanguageName(lang)}.`;
     } else {
-        // IMPROVE EXISTING
         prompt = `You are a hiring manager in ${getContextByLang(lang)}. 
         Rewrite the following job description for a "${title}" role to be more professional, action-oriented, and quantified.
         Use bullet points (•) for readability. Keep it within 3-5 bullet points.
@@ -86,7 +85,7 @@ export const enhanceExperience = async (title: string, rawDescription: string, l
     return response.text?.trim() || rawDescription;
   } catch (error) {
     console.error("Gemini Enhance Error:", error);
-    return rawDescription; // Return original on error
+    return rawDescription;
   }
 };
 
@@ -136,14 +135,14 @@ export const generateCoverLetter = async (resumeData: ResumeData, lang: LangCode
     return response.text?.trim() || "";
   } catch (error) {
     console.error("Gemini Cover Letter Error:", error);
-    return "Could not generate cover letter.";
+    return "";
   }
 };
 
 export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): Promise<JobOpportunity[]> => {
   const client = getClient();
 
-  // Robust fallback if data is missing
+  // Fallback values if resume is empty, to force AI to return SOMETHING
   const targetRole = resumeData.personalInfo.jobTitle || "Professional";
   const location = resumeData.personalInfo.location || getContextByLang(lang);
   
@@ -152,53 +151,38 @@ export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): 
   ).join('\n\n');
 
   try {
-    const prompt = `Act as an expert Technical Recruiter and Headhunter for the ${getContextByLang(lang)} market.
-    Analyze the candidate's profile and identify 5 specific, high-fit job opportunities.
+    const prompt = `Act as an expert Technical Recruiter for ${getContextByLang(lang)}.
+    I need you to find 5 REALISTIC job opportunities for this candidate.
     
-    CANDIDATE PROFILE:
-    - Target Role: ${targetRole}
-    - Location Preference: ${location}
-    - Core Skills: ${resumeData.skills.map(s => s.name).join(', ') || "General Professional Skills"}
+    PROFILE:
+    - Role: ${targetRole}
+    - Location: ${location}
+    - Skills: ${resumeData.skills.map(s => s.name).join(', ') || "General"}
     
-    DETAILED WORK HISTORY:
-    ${experienceContext.length > 10 ? experienceContext : "No specific history provided. Infer seniority based on the Target Role."}
+    HISTORY:
+    ${experienceContext.length > 10 ? experienceContext : "No history provided. Infer from target role."}
     
     TASK:
-    Find 5 realistic, active-style job listings that match this specific profile in ${getContextByLang(lang)}.
-    If the profile is thin, generate opportunities based heavily on the Target Role: "${targetRole}".
+    Generate a list of 5 active-style job listings that would be a good fit.
+    Make sure the companies exist in ${getContextByLang(lang)} or are global.
     
-    OUTPUT FORMAT (JSON):
-    Return a JSON list. For each job, provide:
-    - 'title': The Job Title (in ${getLanguageName(lang)})
-    - 'company': A realistic company name in the region
-    - 'location': City (e.g. Amsterdam, Brussels, Madrid, Lisbon)
-    - 'matchScore': An integer (0-100). If exact match, 90+. If inferred, 75+.
-    - 'salaryRange': Realistic annual salary range (e.g. €45k - €60k)
-    - 'reason': A SPECIFIC explanation of why this fits. Write this in ${getLanguageName(lang)}.
-    - 'hrEmail': A simulated HR email.`;
+    OUTPUT JSON:
+    [
+      {
+        "title": "Job Title",
+        "company": "Company Name",
+        "location": "City",
+        "matchScore": 85,
+        "salaryRange": "€XXk - €XXk",
+        "reason": "Why it fits...",
+        "hrEmail": "hr@company.com"
+      }
+    ]`;
 
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              company: { type: Type.STRING },
-              location: { type: Type.STRING },
-              matchScore: { type: Type.INTEGER },
-              salaryRange: { type: Type.STRING },
-              reason: { type: Type.STRING },
-              hrEmail: { type: Type.STRING }
-            },
-            required: ["title", "company", "location", "matchScore", "reason", "hrEmail", "salaryRange"]
-          }
-        }
-      }
+      config: { responseMimeType: "application/json" }
     });
 
     let text = response.text || "[]";
@@ -220,42 +204,14 @@ export const searchJobs = async (query: string, location: string, lang: LangCode
   const client = getClient();
 
   try {
-    const prompt = `Act as a job search engine for the ${getContextByLang(lang)} market.
-    Find 5 realistic, active job opportunities for the query "${query}" in "${location}".
-    
-    Return a JSON list of jobs. For each job, provide:
-    - 'title': Job title
-    - 'company': Company name
-    - 'location': City
-    - 'matchScore': Random relevant match score between 70-99
-    - 'salaryRange': Estimated salary (e.g., €40k - €50k)
-    - 'reason': A short sentence why this matches the query (in ${getLanguageName(lang)})
-    - 'hrEmail': A simulated HR email (e.g. hr@company.com)
-
-    Write the content in ${getLanguageName(lang)}.`;
+    const prompt = `Act as a job search engine. Find 5 jobs for "${query}" in "${location}".
+    Context: ${getContextByLang(lang)}.
+    Output JSON list with title, company, location, matchScore(70-99), salaryRange, reason, hrEmail.`;
 
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
       contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.ARRAY,
-          items: {
-            type: Type.OBJECT,
-            properties: {
-              title: { type: Type.STRING },
-              company: { type: Type.STRING },
-              location: { type: Type.STRING },
-              matchScore: { type: Type.INTEGER },
-              salaryRange: { type: Type.STRING },
-              reason: { type: Type.STRING },
-              hrEmail: { type: Type.STRING }
-            },
-            required: ["title", "company", "location", "matchScore", "reason", "hrEmail", "salaryRange"]
-          }
-        }
-      }
+      config: { responseMimeType: "application/json" }
     });
 
     let text = response.text || "[]";
@@ -275,26 +231,18 @@ export const searchJobs = async (query: string, location: string, lang: LangCode
 
 export const draftCoverLetter = async (job: JobOpportunity, resumeData: ResumeData, lang: LangCode): Promise<string> => {
   const client = getClient();
-
   try {
-    const prompt = `Write a short, persuasive email body to HR for a job application in ${getContextByLang(lang)}.
-    Job: ${job.title} at ${job.company}.
+    const prompt = `Write a short email to HR applying for ${job.title} at ${job.company}.
     Candidate: ${resumeData.personalInfo.fullName}.
+    Language: ${getLanguageName(lang)}.`;
     
-    Reference this specific experience from my resume to make it personalized:
-    ${resumeData.experience[0]?.title} at ${resumeData.experience[0]?.company}.
-    
-    Key Skill: ${resumeData.skills[0]?.name || 'relevant skills'}.
-    Tone: Professional and enthusiastic. Max 100 words.
-    Write exclusively in ${getLanguageName(lang)}.`;
-
     const response = await client.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: prompt
     });
-    return response.text || "Please find my CV attached.";
+    return response.text || "Attached is my CV.";
   } catch (e) {
-      return "Please find my CV attached.";
+      return "Attached is my CV.";
   }
 };
 
@@ -302,29 +250,17 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
   const client = getClient();
 
   try {
-    const prompt = `Extract resume data from the following raw text into a strict JSON structure matching the ResumeData interface.
-    The text might be unstructured or contain artifacts from PDF conversion. Do your best to identify the sections.
+    const prompt = `Extract resume data from this text into JSON.
+    TEXT: "${text.substring(0, 30000)}"
     
-    RAW TEXT START:
-    "${text}"
-    RAW TEXT END.
-
-    TASK:
-    Parse this text into the following JSON schema. 
-    - Use "generate-random" for IDs.
-    - If a field is missing, use empty string.
-    - Try to infer dates even if they are in different formats.
-    - Split complex skill lists into individual items.
-    
-    JSON Schema:
+    SCHEMA:
     {
       "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "summary": "", "jobTitle": "", "linkedin": "" },
-      "experience": [{ "id": "generate-random", "title": "", "company": "", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "current": boolean, "description": "" }],
-      "education": [{ "id": "generate-random", "school": "", "degree": "", "year": "" }],
-      "skills": [{ "id": "generate-random", "name": "", "level": "Intermediate" }],
-      "languages": [{ "id": "generate-random", "language": "", "proficiency": "Good" }]
-    }
-    `;
+      "experience": [{ "id": "gen", "title": "", "company": "", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "current": false, "description": "" }],
+      "education": [{ "id": "gen", "school": "", "degree": "", "year": "" }],
+      "skills": [{ "id": "gen", "name": "", "level": "Intermediate" }],
+      "languages": [{ "id": "gen", "language": "", "proficiency": "Good" }]
+    }`;
 
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -333,13 +269,8 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
     });
 
     let extractedText = response.text || "{}";
-    
-    // ⚠️ CRITICAL FIX: Clean Markdown formatting ⚠️
-    if (extractedText.startsWith('```json')) {
-        extractedText = extractedText.replace(/^```json\n/, '').replace(/\n```$/, '');
-    } else if (extractedText.startsWith('```')) {
-        extractedText = extractedText.replace(/^```\n/, '').replace(/\n```$/, '');
-    }
+    if (extractedText.startsWith('```json')) extractedText = extractedText.replace(/^```json\n/, '').replace(/\n```$/, '');
+    else if (extractedText.startsWith('```')) extractedText = extractedText.replace(/^```\n/, '').replace(/\n```$/, '');
 
     const extracted = JSON.parse(extractedText);
     
