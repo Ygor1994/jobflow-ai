@@ -132,7 +132,7 @@ const enContent = {
     personal: {
       title: 'Personal Info',
       photoLabel: 'Photo',
-      photoHelp: 'Upload (Max 5MB)',
+      photoHelp: 'Upload (Max 25MB)',
       jobTitle: 'Target Job Title',
       fullName: 'Full Name',
       email: 'Email',
@@ -319,6 +319,10 @@ export const content = {
           title: 'Succesverhalen',
           subtitle: 'Zie voorbeelden van succes van onze gebruikers.'
       }
+    },
+    builder: {
+        ...enContent.builder,
+        personal: { ...enContent.builder.personal, photoHelp: 'Upload (Max 25MB)' }
     }
   },
   es: {
@@ -328,7 +332,7 @@ export const content = {
         nav: { home: 'Inicio', features: 'Recursos', pricing: 'Precios', contact: 'Contacto', create: 'Empezar', login: 'Entrar' },
         hero: {
             badge: '#1 Creador de CV con IA',
-            title: 'Crea Currículos Profesionales para',
+            title: 'Crea Currículos Profissionais para',
             titleHighlight: 'Benelux con IA',
             subtitle: 'Crea CVs optimizados para Europa en minutos. Incluye plantillas profesionales y exportación a PDF instantánea.',
             cta: 'Empezar Ahora',
@@ -353,6 +357,10 @@ export const content = {
             title: 'Historias de Éxito',
             subtitle: 'Ejemplos reales de nuestros usuarios.'
         }
+    },
+    builder: {
+        ...enContent.builder,
+        personal: { ...enContent.builder.personal, photoHelp: 'Subir (Max 25MB)' }
     }
   },
   pt: {
@@ -387,6 +395,11 @@ export const content = {
             title: 'Histórias de Sucesso',
             subtitle: 'Veja exemplos de sucesso dos nossos utilizadores.'
         }
+    },
+    builder: {
+        ...enContent.builder,
+        personal: { ...enContent.builder.personal, photoHelp: 'Carregar (Max 25MB)' }
     }
   }
 };
+    

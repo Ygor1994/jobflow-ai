@@ -79,13 +79,13 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
           for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
-              // IMPORTANT: Join with newline to preserve structure for AI
-              const pageText = textContent.items.map((item: any) => item.str).join('\n');
-              fullText += pageText + '\n';
+              // Use space instead of newline to better handle multi-column layouts where lines break mid-sentence
+              const pageText = textContent.items.map((item: any) => item.str).join(' ');
+              fullText += pageText + ' ';
           }
 
           if (fullText.trim().length < 50) {
-              alert("Could not read text from this PDF. It might be an image scan. Please try a text-based PDF or enter details manually.");
+              alert("Could not extract text. The PDF might be an image scan. Please try a text-based PDF or enter details manually.");
               setIsImporting(false);
               return;
           }
@@ -741,3 +741,4 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
     </div>
   );
 };
+    

@@ -81,8 +81,9 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ data, onChange, on
   const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-        if (file.size > 5 * 1024 * 1024) { // 5MB limit
-            alert("File too large. Please upload an image smaller than 5MB.");
+        // UPDATED: Limit increased to 25MB
+        if (file.size > 25 * 1024 * 1024) { 
+            alert("File too large. Please upload an image smaller than 25MB.");
             return;
         }
         const reader = new FileReader();
@@ -748,3 +749,4 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ data, onChange, on
     </div>
   );
 };
+    
