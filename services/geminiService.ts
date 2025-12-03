@@ -18,7 +18,7 @@ const getContextByLang = (lang: LangCode) => {
     case 'nl': return "Netherlands and Belgium";
     case 'es': return "Spain";
     case 'pt': return "Portugal";
-    default: return "Europe";
+    default: return "Europe (specifically Netherlands, Belgium, Spain, Portugal)";
   }
 };
 
@@ -137,16 +137,36 @@ export const generateCoverLetter = async (resumeData: ResumeData, lang: LangCode
 export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): Promise<JobOpportunity[]> => {
   const client = getClient();
 
+  // Prepare a rich context string from experience to help AI understand seniority and niche
+  const experienceContext = resumeData.experience.map(exp => 
+    `Role: ${exp.title} at ${exp.company} (${exp.startDate} to ${exp.current ? 'Present' : exp.endDate}). Key Responsibilities: ${exp.description}`
+  ).join('\n\n');
+
   try {
-    const prompt = `Analyze the following resume data and identify 5 realistic job opportunities in ${getContextByLang(lang)} (specifically major cities like Lisbon, Porto, Madrid, Barcelona, Amsterdam etc depending on the context).
+    const prompt = `Act as an expert Technical Recruiter and Headhunter for the ${getContextByLang(lang)} market.
+    Analyze the candidate's detailed profile below and identify 5 specific, high-fit job opportunities.
     
-    Resume Context:
-    - Role: ${resumeData.personalInfo.jobTitle}
-    - Skills: ${resumeData.skills.map(s => s.name).join(', ')}
-    - Location preference: ${resumeData.personalInfo.location || getContextByLang(lang)}
+    CANDIDATE PROFILE:
+    - Target Role: ${resumeData.personalInfo.jobTitle}
+    - Location Preference: ${resumeData.personalInfo.location || getContextByLang(lang)}
+    - Core Skills: ${resumeData.skills.map(s => s.name).join(', ')}
     
-    Return a JSON list of jobs. For each job, provide a 'matchScore' (0-100), a 'reason' why it matches (in ${getLanguageName(lang)}), and a simulated 'hrEmail'.
-    The 'title' and 'reason' must be in ${getLanguageName(lang)}.`;
+    DETAILED WORK HISTORY (Use this to determine seniority and domain fit):
+    ${experienceContext}
+    
+    TASK:
+    Find 5 realistic, active-style job listings that match this specific experience level and skillset in ${getContextByLang(lang)}.
+    Prioritize jobs that value the candidate's specific background mentioned in their history.
+    
+    OUTPUT FORMAT (JSON):
+    Return a JSON list. For each job, provide:
+    - 'title': The Job Title (in ${getLanguageName(lang)})
+    - 'company': A realistic company name in the region
+    - 'location': City (e.g. Amsterdam, Brussels, Madrid, Lisbon)
+    - 'matchScore': An integer (0-100) based on how well the candidate's history fits the requirements.
+    - 'salaryRange': Realistic annual salary range (e.g. €45k - €60k)
+    - 'reason': A SPECIFIC explanation of why this fits, referencing their past experience (e.g. "Your 3 years at [Company] makes you a great fit for..."). Write this in ${getLanguageName(lang)}.
+    - 'hrEmail': A simulated HR email.`;
 
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -251,6 +271,10 @@ export const draftCoverLetter = async (job: JobOpportunity, resumeData: ResumeDa
     const prompt = `Write a short, persuasive email body to HR for a job application in ${getContextByLang(lang)}.
     Job: ${job.title} at ${job.company}.
     Candidate: ${resumeData.personalInfo.fullName}.
+    
+    Reference this specific experience from my resume to make it personalized:
+    ${resumeData.experience[0]?.title} at ${resumeData.experience[0]?.company}.
+    
     Key Skill: ${resumeData.skills[0]?.name || 'relevant skills'}.
     Tone: Professional and enthusiastic. Max 100 words.
     Write exclusively in ${getLanguageName(lang)}.`;
@@ -272,7 +296,7 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
     const prompt = `Extract resume data from the following text into a strict JSON structure matching the ResumeData interface.
     
     Text to parse:
-    "${text.substring(0, 10000)}"
+    "${text}"
 
     Return JSON with this schema:
     {

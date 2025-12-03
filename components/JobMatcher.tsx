@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { ResumeData, JobOpportunity, LangCode } from '../types';
 import { findMatchingJobs, draftCoverLetter, searchJobs } from '../services/geminiService';

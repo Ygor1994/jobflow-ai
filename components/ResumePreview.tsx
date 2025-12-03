@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { ResumeData, LangCode } from '../types';
 import { MapPin, Phone, Mail, Linkedin, Calendar, Flag, Car, Briefcase, Sparkles, FileText, MailOpen, Palette, Check, Layout } from 'lucide-react';
@@ -559,49 +560,51 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
             </div>
         </div>
 
-        {/* Paper Container */}
-        <div className="print-area bg-white shadow-2xl w-[210mm] min-h-[297mm] text-slate-800 relative mx-auto overflow-hidden">
-            {view === 'cv' ? (
-                <>
-                    {template === 'modern' && <RenderModern />}
-                    {template === 'professional' && <RenderProfessional />}
-                    {template === 'elegant' && <RenderElegant />}
-                    {template === 'creative' && <RenderCreative />}
-                    {template === 'minimal' && <RenderMinimal />}
-                </>
-            ) : (
-                // --- COVER LETTER LAYOUT ---
-                <div className="p-16 h-full min-h-[297mm] flex flex-col relative">
-                    <div className="border-b-2 pb-6 mb-8 flex justify-between items-end" style={{ borderColor: accentColor }}>
-                         <div>
-                            <h1 className="text-4xl font-bold text-slate-900 uppercase tracking-tight">{data.personalInfo.fullName}</h1>
-                            <p className="text-xl font-medium mt-1" style={{ color: accentColor }}>{data.personalInfo.jobTitle}</p>
-                         </div>
-                         <div className="text-right text-xs text-slate-500 space-y-1">
-                             <p>{data.personalInfo.location}</p>
-                             <p>{data.personalInfo.email}</p>
-                             <p>{data.personalInfo.phone}</p>
-                         </div>
+        {/* Paper Container - Added overflow-x-auto for mobile responsiveness */}
+        <div className="w-full overflow-x-auto pb-8 flex justify-center">
+            <div className="print-area bg-white shadow-2xl w-[210mm] min-h-[297mm] text-slate-800 relative mx-auto overflow-hidden flex-shrink-0">
+                {view === 'cv' ? (
+                    <>
+                        {template === 'modern' && <RenderModern />}
+                        {template === 'professional' && <RenderProfessional />}
+                        {template === 'elegant' && <RenderElegant />}
+                        {template === 'creative' && <RenderCreative />}
+                        {template === 'minimal' && <RenderMinimal />}
+                    </>
+                ) : (
+                    // --- COVER LETTER LAYOUT ---
+                    <div className="p-16 h-full min-h-[297mm] flex flex-col relative">
+                        <div className="border-b-2 pb-6 mb-8 flex justify-between items-end" style={{ borderColor: accentColor }}>
+                             <div>
+                                <h1 className="text-4xl font-bold text-slate-900 uppercase tracking-tight">{data.personalInfo.fullName}</h1>
+                                <p className="text-xl font-medium mt-1" style={{ color: accentColor }}>{data.personalInfo.jobTitle}</p>
+                             </div>
+                             <div className="text-right text-xs text-slate-500 space-y-1">
+                                 <p>{data.personalInfo.location}</p>
+                                 <p>{data.personalInfo.email}</p>
+                                 <p>{data.personalInfo.phone}</p>
+                             </div>
+                        </div>
+                        <div className="mb-12 text-sm text-slate-800">
+                            <p className="font-bold">{data.coverLetter.recipientName}</p>
+                            <p>{data.coverLetter.recipientTitle}</p>
+                            <p>{data.coverLetter.companyName}</p>
+                            <p>{data.coverLetter.companyAddress}</p>
+                        </div>
+                        <div className="mb-8 text-sm text-slate-500">
+                            {new Date().toLocaleDateString('en-NL', { year: 'numeric', month: 'long', day: 'numeric' })}
+                        </div>
+                        <div className="flex-grow text-sm text-slate-800 leading-7 whitespace-pre-line text-justify font-serif">
+                            {data.coverLetter.body || "No cover letter content generated yet. Please go back to the editor to create your cover letter."}
+                        </div>
+                        <div className="mt-12 mb-12">
+                            <p className="text-sm text-slate-800 mb-4">Sincerely,</p>
+                            <p className="text-lg font-serif font-bold text-slate-900">{data.personalInfo.fullName}</p>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 h-4" style={{ backgroundColor: accentColor }}></div>
                     </div>
-                    <div className="mb-12 text-sm text-slate-800">
-                        <p className="font-bold">{data.coverLetter.recipientName}</p>
-                        <p>{data.coverLetter.recipientTitle}</p>
-                        <p>{data.coverLetter.companyName}</p>
-                        <p>{data.coverLetter.companyAddress}</p>
-                    </div>
-                    <div className="mb-8 text-sm text-slate-500">
-                        {new Date().toLocaleDateString('en-NL', { year: 'numeric', month: 'long', day: 'numeric' })}
-                    </div>
-                    <div className="flex-grow text-sm text-slate-800 leading-7 whitespace-pre-line text-justify font-serif">
-                        {data.coverLetter.body || "No cover letter content generated yet. Please go back to the editor to create your cover letter."}
-                    </div>
-                    <div className="mt-12 mb-12">
-                        <p className="text-sm text-slate-800 mb-4">Sincerely,</p>
-                        <p className="text-lg font-serif font-bold text-slate-900">{data.personalInfo.fullName}</p>
-                    </div>
-                    <div className="absolute bottom-0 left-0 right-0 h-4" style={{ backgroundColor: accentColor }}></div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     </div>
   );

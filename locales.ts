@@ -1,3 +1,4 @@
+
 import { LangCode } from './types';
 
 const enContent = {

@@ -136,4 +136,6 @@ export enum AppState {
   BUILDER = 'BUILDER',
   PREVIEW = 'PREVIEW',
   JOBS = 'JOBS',
+  AUTH = 'AUTH',
+  LEGAL = 'LEGAL'
 }

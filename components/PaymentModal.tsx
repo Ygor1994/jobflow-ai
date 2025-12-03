@@ -111,7 +111,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ isOpen, onClose, onS
                 <Lock size={10} /> {t.guarantee}
               </p>
               <p className="text-[10px] text-slate-400">
-                  {t.support}: <a href="mailto:ygorsilveira065@gmail.com" className="text-blue-500 hover:underline">ygorsilveira065@gmail.com</a>
+                  {t.support}: <a href="mailto:support@jobflowai.xyz" className="text-blue-500 hover:underline">support@jobflowai.xyz</a>
               </p>
           </div>
         </div>
