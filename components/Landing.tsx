@@ -76,16 +76,26 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
           const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           let fullText = '';
           
+          // Improved Text Extraction Strategy:
+          // 1. Iterate pages
+          // 2. Get text items
+          // 3. Join with simple space to avoid breaking sentences in multi-column layouts
+          // 4. The AI (geminiService) is robust enough to separate sections from this stream
           for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
-              // Use space instead of newline to better handle multi-column layouts where lines break mid-sentence
-              const pageText = textContent.items.map((item: any) => item.str).join(' ');
+              
+              // Filter out empty strings and join
+              const pageText = textContent.items
+                  .map((item: any) => item.str)
+                  .filter((str: string) => str.trim().length > 0)
+                  .join(' ');
+                  
               fullText += pageText + ' ';
           }
 
-          if (fullText.trim().length < 50) {
-              alert("Could not extract text. The PDF might be an image scan. Please try a text-based PDF or enter details manually.");
+          if (fullText.trim().length < 20) {
+              alert("Could not extract enough text from this PDF. It might be an image scan. Please try entering your details manually.");
               setIsImporting(false);
               return;
           }
@@ -94,7 +104,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
           onImport(parsedData);
       } catch (error) {
           console.error("Import Failed", error);
-          alert("Could not import PDF. Please try creating manually.");
+          alert("Error reading PDF file. Please try manual creation.");
           setIsImporting(false);
       }
   };
@@ -741,4 +751,3 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
     </div>
   );
 };
-    

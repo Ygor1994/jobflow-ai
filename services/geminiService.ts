@@ -1,3 +1,4 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA } from "../types";
 
@@ -293,12 +294,21 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
   const client = getClient();
 
   try {
-    const prompt = `Extract resume data from the following text into a strict JSON structure matching the ResumeData interface.
+    const prompt = `Extract resume data from the following raw text into a strict JSON structure matching the ResumeData interface.
+    The text might be unstructured or contain artifacts from PDF conversion. Do your best to identify the sections.
     
-    Text to parse:
+    RAW TEXT START:
     "${text}"
+    RAW TEXT END.
 
-    Return JSON with this schema:
+    TASK:
+    Parse this text into the following JSON schema. 
+    - Use "generate-random" for IDs.
+    - If a field is missing, use empty string.
+    - Try to infer dates even if they are in different formats.
+    - Split complex skill lists into individual items.
+    
+    JSON Schema:
     {
       "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "summary": "", "jobTitle": "", "linkedin": "" },
       "experience": [{ "id": "generate-random", "title": "", "company": "", "startDate": "YYYY-MM-DD", "endDate": "YYYY-MM-DD", "current": boolean, "description": "" }],
@@ -306,7 +316,6 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
       "skills": [{ "id": "generate-random", "name": "", "level": "Intermediate" }],
       "languages": [{ "id": "generate-random", "language": "", "proficiency": "Good" }]
     }
-    If a date is unknown, use empty string.
     `;
 
     const response = await client.models.generateContent({
