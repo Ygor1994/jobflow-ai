@@ -57,19 +57,25 @@ export const enhanceExperience = async (title: string, rawDescription: string, l
 
   try {
     let prompt = '';
-    if (rawDescription && rawDescription.trim().length > 10) {
+    
+    // LOGIC UPDATE: Explicitly handle empty vs existing text
+    if (!rawDescription || rawDescription.trim().length < 5) {
+        // GENERATE FROM SCRATCH
+        prompt = `You are a professional resume writer for the ${getContextByLang(lang)} market.
+        The candidate has the job title: "${title}".
+        They have not provided a description. 
+        
+        TASK: Generate a robust, professional list of 4-5 bullet points describing typical high-impact responsibilities and achievements for a "${title}".
+        Use strong action verbs.
+        Write exclusively in ${getLanguageName(lang)}.`;
+    } else {
+        // IMPROVE EXISTING
         prompt = `You are a hiring manager in ${getContextByLang(lang)}. 
         Rewrite the following job description for a "${title}" role to be more professional, action-oriented, and quantified.
         Use bullet points (•) for readability. Keep it within 3-5 bullet points.
         Write exclusively in ${getLanguageName(lang)}.
         
         Raw Input: "${rawDescription}"`;
-    } else {
-        prompt = `You are a hiring manager in ${getContextByLang(lang)}. 
-        Write a professional job description for a "${title}" role.
-        Generate 3-4 impactful bullet points (•) highlighting typical key responsibilities and achievements for this role.
-        Keep it concise and professional.
-        Write exclusively in ${getLanguageName(lang)}.`;
     }
 
     const response = await client.models.generateContent({
@@ -80,7 +86,7 @@ export const enhanceExperience = async (title: string, rawDescription: string, l
     return response.text?.trim() || rawDescription;
   } catch (error) {
     console.error("Gemini Enhance Error:", error);
-    return rawDescription;
+    return rawDescription; // Return original on error
   }
 };
 
@@ -137,35 +143,38 @@ export const generateCoverLetter = async (resumeData: ResumeData, lang: LangCode
 export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): Promise<JobOpportunity[]> => {
   const client = getClient();
 
-  // Prepare a rich context string from experience to help AI understand seniority and niche
+  // Robust fallback if data is missing
+  const targetRole = resumeData.personalInfo.jobTitle || "Professional";
+  const location = resumeData.personalInfo.location || getContextByLang(lang);
+  
   const experienceContext = resumeData.experience.map(exp => 
     `Role: ${exp.title} at ${exp.company} (${exp.startDate} to ${exp.current ? 'Present' : exp.endDate}). Key Responsibilities: ${exp.description}`
   ).join('\n\n');
 
   try {
     const prompt = `Act as an expert Technical Recruiter and Headhunter for the ${getContextByLang(lang)} market.
-    Analyze the candidate's detailed profile below and identify 5 specific, high-fit job opportunities.
+    Analyze the candidate's profile and identify 5 specific, high-fit job opportunities.
     
     CANDIDATE PROFILE:
-    - Target Role: ${resumeData.personalInfo.jobTitle}
-    - Location Preference: ${resumeData.personalInfo.location || getContextByLang(lang)}
-    - Core Skills: ${resumeData.skills.map(s => s.name).join(', ')}
+    - Target Role: ${targetRole}
+    - Location Preference: ${location}
+    - Core Skills: ${resumeData.skills.map(s => s.name).join(', ') || "General Professional Skills"}
     
-    DETAILED WORK HISTORY (Use this to determine seniority and domain fit):
-    ${experienceContext}
+    DETAILED WORK HISTORY:
+    ${experienceContext.length > 10 ? experienceContext : "No specific history provided. Infer seniority based on the Target Role."}
     
     TASK:
-    Find 5 realistic, active-style job listings that match this specific experience level and skillset in ${getContextByLang(lang)}.
-    Prioritize jobs that value the candidate's specific background mentioned in their history.
+    Find 5 realistic, active-style job listings that match this specific profile in ${getContextByLang(lang)}.
+    If the profile is thin, generate opportunities based heavily on the Target Role: "${targetRole}".
     
     OUTPUT FORMAT (JSON):
     Return a JSON list. For each job, provide:
     - 'title': The Job Title (in ${getLanguageName(lang)})
     - 'company': A realistic company name in the region
     - 'location': City (e.g. Amsterdam, Brussels, Madrid, Lisbon)
-    - 'matchScore': An integer (0-100) based on how well the candidate's history fits the requirements.
+    - 'matchScore': An integer (0-100). If exact match, 90+. If inferred, 75+.
     - 'salaryRange': Realistic annual salary range (e.g. €45k - €60k)
-    - 'reason': A SPECIFIC explanation of why this fits, referencing their past experience (e.g. "Your 3 years at [Company] makes you a great fit for..."). Write this in ${getLanguageName(lang)}.
+    - 'reason': A SPECIFIC explanation of why this fits. Write this in ${getLanguageName(lang)}.
     - 'hrEmail': A simulated HR email.`;
 
     const response = await client.models.generateContent({

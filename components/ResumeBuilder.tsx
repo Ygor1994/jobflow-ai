@@ -749,4 +749,3 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ data, onChange, on
     </div>
   );
 };
-    
