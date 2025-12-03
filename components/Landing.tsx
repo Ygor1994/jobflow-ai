@@ -601,7 +601,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
                                   <div className="w-12 h-12 bg-white/10 group-hover:bg-blue-600 transition-colors rounded-2xl flex items-center justify-center"><Mail size={20}/></div>
                                   <div>
                                       <div className="text-xs text-slate-400 uppercase font-bold mb-0.5">Email Us</div>
-                                      <div className="text-sm font-medium">ygorsilveira065@gmail.com</div>
+                                      <div className="text-sm font-medium">support@jobflowai.xyz</div>
                                   </div>
                               </div>
                               <div className="flex items-center gap-4 group">
@@ -691,7 +691,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
                     <ul className="space-y-4 text-sm text-slate-600">
                         <li className="flex items-center justify-center md:justify-start gap-2">
                             <Mail size={16} className="text-blue-600"/> 
-                            <a href="mailto:ygorsilveira065@gmail.com" className="hover:underline">ygorsilveira065@gmail.com</a>
+                            <a href="mailto:support@jobflowai.xyz" className="hover:underline">support@jobflowai.xyz</a>
                         </li>
                         <li className="flex items-center justify-center md:justify-start gap-2">
                             <MapPin size={16} className="text-blue-600"/> 
