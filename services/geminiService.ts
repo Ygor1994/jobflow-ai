@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA } from "../types";
 
@@ -324,7 +323,16 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
       config: { responseMimeType: "application/json" }
     });
 
-    const extracted = JSON.parse(response.text || "{}");
+    let extractedText = response.text || "{}";
+    
+    // ⚠️ CRITICAL FIX: Clean Markdown formatting ⚠️
+    if (extractedText.startsWith('```json')) {
+        extractedText = extractedText.replace(/^```json\n/, '').replace(/\n```$/, '');
+    } else if (extractedText.startsWith('```')) {
+        extractedText = extractedText.replace(/^```\n/, '').replace(/\n```$/, '');
+    }
+
+    const extracted = JSON.parse(extractedText);
     
     return {
         ...INITIAL_RESUME_DATA,

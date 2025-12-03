@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, Sparkles, Globe, ShieldCheck, Star, Quote, X, LayoutGrid, Briefcase, Zap, Check, Minus, Lock, Mail, MessageCircle, Upload, Loader2, Pencil, Layers, Cookie, Menu, Linkedin, Twitter, Instagram, Layout, Download, FileText, User, MapPin, Phone, Bot, Crown } from 'lucide-react';
 import { LangCode, ResumeData } from '../types';
@@ -76,22 +75,18 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
           const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           let fullText = '';
           
-          // Improved Text Extraction Strategy:
-          // 1. Iterate pages
-          // 2. Get text items
-          // 3. Join with simple space to avoid breaking sentences in multi-column layouts
-          // 4. The AI (geminiService) is robust enough to separate sections from this stream
           for (let i = 1; i <= pdf.numPages; i++) {
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
               
-              // Filter out empty strings and join
+              // CRITICAL UPDATE: Join with newline (\n) instead of space.
+              // This preserves the visual structure (headers usually on their own lines),
+              // making it much easier for the AI to identify sections.
               const pageText = textContent.items
                   .map((item: any) => item.str)
-                  .filter((str: string) => str.trim().length > 0)
-                  .join(' ');
+                  .join('\n');
                   
-              fullText += pageText + ' ';
+              fullText += pageText + '\n';
           }
 
           if (fullText.trim().length < 20) {
