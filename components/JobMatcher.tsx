@@ -1,8 +1,9 @@
+
 import React, { useEffect, useState } from 'react';
 import { ResumeData, JobOpportunity, LangCode, Skill } from '../types';
-import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep, tailorResume } from '../services/geminiService';
+import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep, tailorResume, analyzeInterviewAnswer } from '../services/geminiService';
 import { content } from '../locales';
-import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap, Wand2, Zap, Undo2 } from 'lucide-react';
+import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap, Wand2, Zap, Undo2, BrainCircuit } from 'lucide-react';
 
 interface JobMatcherProps {
   resumeData: ResumeData;
@@ -28,6 +29,11 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
 
   const [prepData, setPrepData] = useState<any[] | null>(null);
   const [prepJobTitle, setPrepJobTitle] = useState<string>("");
+
+  // Answer Analysis State
+  const [userAnswers, setUserAnswers] = useState<Record<number, string>>({});
+  const [aiFeedback, setAiFeedback] = useState<Record<number, string>>({});
+  const [analyzingIndex, setAnalyzingIndex] = useState<number | null>(null);
 
   const [backupData, setBackupData] = useState<ResumeData | null>(null);
 
@@ -130,6 +136,9 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
   const handleInterviewPrep = async (job: JobOpportunity) => {
       setIsPrepping(job.id);
       setPrepJobTitle(`${job.title} @ ${job.company}`);
+      setPrepData(null);
+      setUserAnswers({});
+      setAiFeedback({});
       try {
           const questions = await generateInterviewPrep(job.title, job.company, lang);
           setPrepData(questions);
@@ -137,6 +146,21 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
           alert("Could not generate interview prep.");
       } finally {
           setIsPrepping(null);
+      }
+  };
+
+  const handleAnalyzeAnswer = async (index: number, question: string) => {
+      const answer = userAnswers[index];
+      if (!answer) return;
+
+      setAnalyzingIndex(index);
+      try {
+          const feedback = await analyzeInterviewAnswer(question, answer, lang);
+          setAiFeedback(prev => ({...prev, [index]: feedback}));
+      } catch(e) {
+          console.error(e);
+      } finally {
+          setAnalyzingIndex(null);
       }
   };
 
@@ -386,7 +410,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
             </div>
         )}
 
-        {/* --- MODAL: INTERVIEW PREP --- */}
+        {/* --- MODAL: INTERVIEW PREP WITH INTERACTIVE AI COACHING --- */}
         {prepData && (
              <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                  <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setPrepData(null)}></div>
@@ -398,14 +422,19 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
                          </div>
                          <button onClick={() => setPrepData(null)} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"><X size={20}/></button>
                      </div>
-                     <div className="p-6 overflow-y-auto custom-scrollbar">
+                     <div className="p-6 overflow-y-auto custom-scrollbar bg-slate-50">
                          {prepData.map((item, idx) => (
-                             <div key={idx} className="mb-6 last:mb-0 border border-slate-100 rounded-2xl p-5 bg-slate-50 hover:bg-white hover:shadow-lg transition-all duration-300 group">
-                                 <h4 className="font-bold text-lg text-slate-800 mb-3 flex gap-3">
-                                     <span className="flex-shrink-0 w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center font-bold text-sm">{idx + 1}</span>
-                                     {item.question}
-                                 </h4>
-                                 <div className="space-y-3 pl-11">
+                             <div key={idx} className="mb-8 last:mb-0 border border-slate-200 rounded-2xl bg-white shadow-sm overflow-hidden">
+                                 {/* Question Header */}
+                                 <div className="p-5 border-b border-slate-100 bg-slate-50/50">
+                                    <h4 className="font-bold text-lg text-slate-800 flex gap-3">
+                                        <span className="flex-shrink-0 w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center font-bold text-sm">{idx + 1}</span>
+                                        {item.question}
+                                    </h4>
+                                 </div>
+                                 
+                                 {/* Static Hints */}
+                                 <div className="p-5 space-y-4">
                                     <div className="flex gap-3">
                                         <div className="mt-0.5"><Search size={16} className="text-slate-400" /></div>
                                         <div>
@@ -417,8 +446,45 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
                                         <div className="mt-0.5"><Lightbulb size={16} className="text-yellow-500" /></div>
                                         <div>
                                             <span className="text-xs font-bold text-yellow-600 uppercase tracking-wider">{t.interview.tip}</span>
-                                            <p className="text-slate-800 font-medium text-sm leading-relaxed bg-yellow-50 p-3 rounded-xl border border-yellow-100">{item.answerTip}</p>
+                                            <p className="text-slate-800 font-medium text-sm leading-relaxed bg-yellow-50 p-3 rounded-xl border border-yellow-100 mt-1">{item.answerTip}</p>
                                         </div>
+                                    </div>
+
+                                    {/* INTERACTIVE PRACTICE AREA */}
+                                    <div className="mt-4 pt-4 border-t border-slate-100">
+                                        <label className="block text-xs font-bold text-violet-600 uppercase mb-2 flex items-center gap-1">
+                                            <BrainCircuit size={14}/> Practice your answer
+                                        </label>
+                                        <div className="relative">
+                                            <textarea 
+                                                className="w-full p-3 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-violet-500 outline-none resize-none bg-slate-50 focus:bg-white transition-all placeholder:text-slate-300"
+                                                rows={3}
+                                                placeholder="Type your answer here to get AI feedback..."
+                                                value={userAnswers[idx] || ''}
+                                                onChange={(e) => setUserAnswers(prev => ({...prev, [idx]: e.target.value}))}
+                                            />
+                                            <button 
+                                                onClick={() => handleAnalyzeAnswer(idx, item.question)}
+                                                disabled={!userAnswers[idx] || analyzingIndex === idx}
+                                                className="absolute bottom-2 right-2 bg-violet-600 hover:bg-violet-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
+                                            >
+                                                {analyzingIndex === idx ? <Loader2 size={12} className="animate-spin"/> : <Sparkles size={12}/>}
+                                                Analyze
+                                            </button>
+                                        </div>
+
+                                        {/* AI Feedback Display */}
+                                        {aiFeedback[idx] && (
+                                            <div className="mt-3 bg-violet-50 border border-violet-100 rounded-xl p-4 animate-in fade-in slide-in-from-top-2">
+                                                <div className="flex items-start gap-3">
+                                                    <div className="bg-white p-1.5 rounded-full shadow-sm"><Wand2 size={14} className="text-violet-600"/></div>
+                                                    <div>
+                                                        <h5 className="text-xs font-bold text-violet-800 mb-1">AI Coach Feedback</h5>
+                                                        <p className="text-sm text-slate-700 leading-relaxed">{aiFeedback[idx]}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                  </div>
                              </div>

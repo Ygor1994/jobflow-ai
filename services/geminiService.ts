@@ -272,6 +272,27 @@ export const generateInterviewPrep = async (title: string, company: string, lang
   }
 };
 
+// --- NEW: Interactive Interview Answer Analysis ---
+export const analyzeInterviewAnswer = async (question: string, answer: string, lang: LangCode): Promise<string> => {
+  const client = getClient();
+  try {
+    const prompt = `Act as a senior interview coach.
+    Question: "${question}"
+    Candidate Answer: "${answer}"
+    
+    Task: Provide a concise critique (max 3 sentences) and one specific improvement tip. Be encouraging but constructive.
+    Language: ${getLanguageName(lang)}.`;
+
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+    });
+    return response.text?.trim() || "";
+  } catch (error) {
+    return "Could not analyze answer at this time.";
+  }
+};
+
 // --- NEW: RESUME TAILORING ---
 export const tailorResume = async (resumeData: ResumeData, jobTitle: string, company: string, lang: LangCode): Promise<{summary: string, skills: {name: string, level: string}[]}> => {
   const client = getClient();
