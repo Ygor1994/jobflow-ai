@@ -13,10 +13,12 @@ export default defineConfig(({ mode }) => {
       sourcemap: false
     },
     define: {
-      // Garante que process.env exista no navegador e injeta a API Key
+      'process.env.API_KEY': JSON.stringify(env.API_KEY || process.env.API_KEY || ''),
+      'process.env.NODE_ENV': JSON.stringify(mode),
+      // Fallback object for safety
       'process.env': JSON.stringify({
-        API_KEY: env.API_KEY || process.env.API_KEY || '',
-        NODE_ENV: mode
+         API_KEY: env.API_KEY || process.env.API_KEY || '',
+         NODE_ENV: mode
       })
     }
   };
