@@ -8,6 +8,7 @@ import { PaymentSuccess } from './components/PaymentSuccess';
 import { JobMatcher } from './components/JobMatcher';
 import { Auth } from './components/Auth';
 import { Legal } from './components/Legal';
+import { AiAssistant } from './components/AiAssistant';
 import { ResumeData, INITIAL_RESUME_DATA, AppState, LangCode } from './types';
 
 const App: React.FC = () => {
@@ -65,7 +66,10 @@ const App: React.FC = () => {
     }
   }, [resumeData]);
 
-  const handleStart = () => setState(AppState.BUILDER);
+  const handleStart = () => {
+      setState(AppState.BUILDER);
+  };
+
   const handleImport = (importedData: ResumeData) => {
       setResumeData(importedData);
       setState(AppState.BUILDER);
@@ -187,6 +191,11 @@ const App: React.FC = () => {
         onClose={() => setShowSuccess(false)}
         lang={lang}
       />
+      
+      {/* GLOBAL AI ASSISTANT (Available in Builder, Preview, Jobs) */}
+      {state !== AppState.LANDING && state !== AppState.AUTH && state !== AppState.LEGAL && (
+          <AiAssistant resumeData={resumeData} lang={lang} />
+      )}
 
     </div>
   );

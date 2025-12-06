@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect } from 'react';
 import { ResumeData, Experience, Education, Skill, Language, Course, Interest, Reference, LangCode } from '../types';
-import { Plus, Trash2, Wand2, Loader2, ChevronRight, ChevronLeft, User, Briefcase, GraduationCap, Wrench, Globe, Award, Heart, Users, LayoutGrid, MailOpen, Crown, Upload, X, Check, Layers, ArrowLeft, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Wand2, Loader2, ChevronRight, ChevronLeft, User, Briefcase, GraduationCap, Wrench, Globe, Award, Heart, Users, LayoutGrid, MailOpen, Crown, Upload, X, Check, Layers, ArrowLeft, Sparkles, Github } from 'lucide-react';
 import { generateSummary, enhanceExperience, suggestSkills, generateCoverLetter } from '../services/geminiService';
 import { content } from '../locales';
 
@@ -243,7 +244,7 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ data, onChange, on
           <label className={LABEL_CLASS}>{t.personal.license}</label>
           <input type="text" className={INPUT_CLASS} placeholder="B" value={data.personalInfo.drivingLicense} onChange={(e) => updatePersonal('drivingLicense', e.target.value)} />
         </div>
-        <div className="md:col-span-2 group">
+        <div className="group">
           <label className={LABEL_CLASS}>{t.personal.linkedin}</label>
           <input type="text" className={INPUT_CLASS} placeholder="linkedin.com/in/jan" value={data.personalInfo.linkedin} onChange={(e) => updatePersonal('linkedin', e.target.value)} />
         </div>
@@ -383,7 +384,7 @@ export const ResumeBuilder: React.FC<ResumeBuilderProps> = ({ data, onChange, on
 
         {showSkillSelector && (
             <div className="bg-white p-6 rounded-xl border border-blue-200 shadow-xl mb-6 animate-in zoom-in duration-300 relative overflow-hidden">
-                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-violet-500"></div>
+                <div className="absolute top-0 left-0 w-1 h-1 bg-gradient-to-r from-blue-500 to-violet-500"></div>
                 <h3 className="font-bold text-lg mb-1">{t.skills.selectorTitle}</h3>
                 <p className="text-slate-500 text-xs mb-4">{t.skills.selectorSubtitle}</p>
                 <div className="flex flex-wrap gap-2 mb-6">

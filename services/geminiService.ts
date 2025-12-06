@@ -1,4 +1,5 @@
-import { GoogleGenAI } from "@google/genai";
+
+import { GoogleGenAI, Chat } from "@google/genai";
 import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA, AuditResult } from "../types";
 
 const getClient = () => {
@@ -28,25 +29,62 @@ const getLanguageName = (lang: LangCode) => {
 const extractJSON = (text: string): string => {
     if (!text) return "[]";
     
-    // 1. Try to find a JSON code block
-    const codeBlockMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
-    if (codeBlockMatch) {
-        return codeBlockMatch[1];
+    // 1. Try to find a JSON code block with ```json
+    const jsonBlock = text.match(/```json\n([\s\S]*?)\n```/);
+    if (jsonBlock) return jsonBlock[1];
+
+    // 2. Try to find a code block without language specifier
+    const codeBlock = text.match(/```\n([\s\S]*?)\n```/);
+    if (codeBlock) return codeBlock[1];
+    
+    // 3. Robust object search: Find the first '{' and the last '}'
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        return text.substring(firstBrace, lastBrace + 1);
     }
     
-    // 2. Try to find an array pattern [...]
-    const arrayMatch = text.match(/\[[\s\S]*\]/);
-    if (arrayMatch) {
-        return arrayMatch[0];
-    }
+    // 4. Robust array search
+    const firstBracket = text.indexOf('[');
+    const lastBracket = text.lastIndexOf(']');
     
-    // 3. Try to find an object pattern {...}
-    const objectMatch = text.match(/\{[\s\S]*\}/);
-    if (objectMatch) {
-        return objectMatch[0];
+    if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
+        return text.substring(firstBracket, lastBracket + 1);
     }
 
     return text;
+};
+
+// --- HELPER: NORMALIZE DATE FOR HTML INPUTS ---
+// HTML <input type="date"> REQUIRES 'YYYY-MM-DD'. 
+// If we have 'YYYY-MM', append '-01'. If 'YYYY', append '-01-01'.
+const normalizeDate = (dateStr: string | null | undefined): string => {
+    if (!dateStr) return "";
+    
+    const cleanStr = String(dateStr).trim();
+    
+    // Check if it matches YYYY-MM-DD
+    if (/^\d{4}-\d{2}-\d{2}$/.test(cleanStr)) return cleanStr;
+    
+    // Check if matches YYYY-MM
+    if (/^\d{4}-\d{2}$/.test(cleanStr)) return `${cleanStr}-01`;
+    
+    // Check if matches YYYY
+    if (/^\d{4}$/.test(cleanStr)) return `${cleanStr}-01-01`;
+
+    // Try to parse typical text dates (e.g. "Jan 2020")
+    // Note: Date.parse might be inconsistent, but better than nothing
+    const timestamp = Date.parse(cleanStr);
+    if (!isNaN(timestamp)) {
+        const d = new Date(timestamp);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    }
+
+    return "";
 };
 
 export const generateSummary = async (jobTitle: string, experienceStr: string, lang: LangCode): Promise<string> => {
@@ -318,24 +356,61 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
   const client = getClient();
 
   try {
-    // UPDATED PROMPT: More robust instructions for messy extracted text
-    const prompt = `Extract resume data from the provided raw text into a JSON object.
+    // UPDATED PROMPT: Specific rules for dates and numbers to fix the user's issue
+    const prompt = `Act as a Data Extraction AI. Convert the following Resume / CV text into a structured JSON object.
     
-    RAW TEXT: "${text.substring(0, 30000)}"
+    --- START OF RESUME TEXT ---
+    ${text.substring(0, 30000)}
+    --- END OF RESUME TEXT ---
     
-    INSTRUCTIONS:
-    - The text might lack newlines or proper formatting. Use context clues to identify sections.
-    - Infer the "summary" if not explicitly labeled.
-    - For "experience", try to split distinct roles even if they run together.
-    - RETURN ONLY JSON.
+    CRITICAL EXTRACTION RULES:
+    1. **Dates**: You MUST extract Start and End dates for Experience and Education. 
+       - **IMPORTANT**: Output dates strictly in 'YYYY-MM-DD' format (ISO 8601).
+       - If only Month/Year is available (e.g. "Jan 2020"), convert to "2020-01-01".
+       - If only Year is available (e.g. "2020"), convert to "2020-01-01".
+       - If the job is current (e.g., "Present", "Now", "Current"), set "endDate" to "Present" and "current" boolean to true.
+       - Look for "Date of Birth" or "Born" in personal info and format as "YYYY-MM-DD".
+    
+    2. **Phone Numbers**: PDF text often creates spaces between digits (e.g., "+ 3 1 6 ..."). 
+       - You MUST merge these into a standard format (e.g., "+31 6 12345678").
+       - Look for patterns like "+31", "06", "+34" near the top.
+    
+    3. **Metrics/Numbers**: In the 'description' fields, preserve all numbers (e.g., "Increased sales by 20%", "Managed $50k budget"). Do not remove specific metrics.
 
-    SCHEMA:
+    4. **Links**: Look for LinkedIn and website URLs.
+    
+    REQUIRED JSON STRUCTURE:
     {
-      "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "jobTitle": "", "summary": "" },
-      "experience": [{ "title": "", "company": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "description": "" }],
-      "education": [{ "school": "", "degree": "", "year": "" }],
-      "skills": [{ "name": "", "level": "Intermediate" }],
-      "languages": [{ "language": "", "proficiency": "Fluent" }]
+      "personalInfo": { 
+          "fullName": "Name", 
+          "email": "Email", 
+          "phone": "Phone (cleaned)", 
+          "location": "City, Country", 
+          "jobTitle": "Target Job Title or Current Role", 
+          "summary": "Professional summary...",
+          "dateOfBirth": "YYYY-MM-DD",
+          "linkedin": "url",
+          "website": "url"
+      },
+      "experience": [
+          { 
+            "title": "Role", 
+            "company": "Company", 
+            "startDate": "YYYY-MM-DD", 
+            "endDate": "YYYY-MM-DD", 
+            "current": boolean,
+            "description": "Bullet points with numbers preserved..." 
+          }
+      ],
+      "education": [
+          { "school": "University", "degree": "Degree Name", "year": "YYYY" }
+      ],
+      "skills": [
+          { "name": "Skill Name", "level": "Intermediate" }
+      ],
+      "languages": [
+          { "language": "Language Name", "proficiency": "Fluent" }
+      ]
     }`;
 
     const response = await client.models.generateContent({
@@ -345,18 +420,98 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
     });
 
     const extractedText = extractJSON(response.text || "");
-    const extracted = JSON.parse(extractedText);
+    let extracted;
+    
+    try {
+        extracted = JSON.parse(extractedText);
+    } catch (jsonError) {
+        console.error("JSON Parse failed in parseResumeFromText", jsonError);
+        console.log("Raw Response:", response.text);
+        return INITIAL_RESUME_DATA; // Fail gracefully
+    }
+    
+    // Safely convert potentially null fields to empty strings to avoid "Cannot read properties of null (reading 'length')"
+    const safeString = (val: any) => (val === null || val === undefined) ? "" : String(val);
+    const p = extracted.personalInfo || {};
     
     return {
         ...INITIAL_RESUME_DATA,
-        personalInfo: { ...INITIAL_RESUME_DATA.personalInfo, ...extracted.personalInfo },
-        experience: Array.isArray(extracted.experience) ? extracted.experience.map((e: any) => ({...e, id: Math.random().toString(36).substr(2,9)})) : [],
-        education: Array.isArray(extracted.education) ? extracted.education.map((e: any) => ({...e, id: Math.random().toString(36).substr(2,9)})) : [],
-        skills: Array.isArray(extracted.skills) ? extracted.skills.map((e: any) => ({...e, id: Math.random().toString(36).substr(2,9)})) : [],
-        languages: Array.isArray(extracted.languages) ? extracted.languages.map((e: any) => ({...e, id: Math.random().toString(36).substr(2,9)})) : [],
+        personalInfo: {
+            fullName: safeString(p.fullName),
+            email: safeString(p.email),
+            phone: safeString(p.phone),
+            location: safeString(p.location),
+            linkedin: safeString(p.linkedin),
+            website: safeString(p.website),
+            summary: safeString(p.summary),
+            jobTitle: safeString(p.jobTitle),
+            dateOfBirth: normalizeDate(p.dateOfBirth), // Normalize DoB
+            nationality: safeString(p.nationality),
+            drivingLicense: safeString(p.drivingLicense),
+            photoUrl: safeString(p.photoUrl),
+        },
+        experience: Array.isArray(extracted.experience) ? extracted.experience.map((e: any) => ({
+            id: Math.random().toString(36).substr(2,9),
+            title: safeString(e.title),
+            company: safeString(e.company),
+            startDate: normalizeDate(e.startDate), // Normalize Start
+            endDate: e.current || String(e.endDate).toLowerCase().includes('present') ? '' : normalizeDate(e.endDate), // Normalize End
+            current: !!e.current || String(e.endDate).toLowerCase().includes('present'),
+            description: safeString(e.description)
+        })) : [],
+        education: Array.isArray(extracted.education) ? extracted.education.map((e: any) => ({
+            id: Math.random().toString(36).substr(2,9),
+            school: safeString(e.school),
+            degree: safeString(e.degree),
+            year: safeString(e.year)
+        })) : [],
+        skills: Array.isArray(extracted.skills) ? extracted.skills.map((e: any) => ({
+            id: Math.random().toString(36).substr(2,9),
+            name: safeString(e.name),
+            level: safeString(e.level) || 'Intermediate'
+        })) : [],
+        languages: Array.isArray(extracted.languages) ? extracted.languages.map((e: any) => ({
+            id: Math.random().toString(36).substr(2,9),
+            language: safeString(e.language),
+            proficiency: safeString(e.proficiency) || 'Native'
+        })) : [],
+        courses: [], 
+        interests: [],
+        references: [],
+        coverLetter: INITIAL_RESUME_DATA.coverLetter,
+        jobMatches: [],
+        meta: INITIAL_RESUME_DATA.meta
     };
   } catch (error) {
     console.error("Resume Parse Error", error);
     return INITIAL_RESUME_DATA;
   }
+};
+
+// --- NEW: CHAT ASSISTANT ---
+export const createResumeChat = (resumeData: ResumeData, lang: LangCode): Chat => {
+  const client = getClient();
+  const context = JSON.stringify(resumeData);
+  const langName = getLanguageName(lang);
+  
+  return client.chats.create({
+    model: 'gemini-2.5-flash',
+    config: {
+      systemInstruction: `You are JobFlow AI, an expert career coach and resume writer. 
+      
+      CURRENT RESUME CONTEXT (JSON): 
+      ${context}
+      
+      GOAL:
+      Help the user improve their resume, answer career questions, or suggest improvements.
+      
+      GUIDELINES:
+      - Be concise, professional, and encouraging.
+      - If they ask for suggestions (e.g., "rewrite my summary"), provide specific text they can copy.
+      - If they ask about gaps or missing skills, analyze the provided JSON.
+      - Language: Respond in ${langName}.
+      - Use Markdown for formatting (bold, lists).
+      `
+    }
+  });
 };

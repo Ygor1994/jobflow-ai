@@ -1,8 +1,16 @@
+
 {
   "name": "jobflow-ai",
   "private": true,
   "version": "1.0.1",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/YOUR_USERNAME/jobflow-ai.git"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",

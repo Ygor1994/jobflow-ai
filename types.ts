@@ -1,4 +1,5 @@
 
+
 export type LangCode = 'en' | 'nl' | 'es' | 'pt';
 
 export interface Experience {
@@ -79,7 +80,7 @@ export interface ResumeData {
     companyAddress: string;
     body: string;
   };
-  jobMatches: JobOpportunity[]; // Added for persistence
+  jobMatches: JobOpportunity[];
   meta: {
     accentColor: string;
     template: 'modern' | 'professional' | 'elegant' | 'creative' | 'minimal';
@@ -96,7 +97,7 @@ export interface JobOpportunity {
   reason: string;
   hrEmail: string;
   url?: string;
-  applied?: boolean; // Track application status
+  applied?: boolean;
 }
 
 export interface AuditResult {
@@ -137,7 +138,7 @@ export const INITIAL_RESUME_DATA: ResumeData = {
   },
   jobMatches: [],
   meta: {
-    accentColor: '#2563eb', // Default Blue
+    accentColor: '#2563eb',
     template: 'modern'
   }
 };
