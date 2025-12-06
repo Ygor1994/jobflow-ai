@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { ResumeData, LangCode, AuditResult } from '../types';
-import { MapPin, Phone, Mail, Linkedin, Calendar, Flag, Car, Briefcase, Sparkles, FileText, MailOpen, Palette, Check, Layout, TrendingUp } from 'lucide-react';
+import { MapPin, Phone, Mail, Linkedin, Calendar, Flag, Car, Briefcase, Sparkles, FileText, MailOpen, Palette, Check, Layout, TrendingUp, Github, Copy } from 'lucide-react';
 import { content } from '../locales';
 import { auditResume } from '../services/geminiService';
 import { ResumeAuditModal } from './ResumeAuditModal';
@@ -86,6 +86,49 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
       const s = formatDate(start);
       const e = current ? t.labels.present : formatDate(end);
       return `${s} – ${e}`;
+  };
+
+  const handleGithubExport = () => {
+      const { personalInfo, experience, education, skills } = data;
+      
+      let md = `# ${personalInfo.fullName}\n`;
+      md += `### ${personalInfo.jobTitle}\n\n`;
+      
+      if (personalInfo.summary) {
+        md += `> ${personalInfo.summary}\n\n`;
+      }
+
+      md += `## 📫 Contact\n`;
+      if (personalInfo.location) md += `- 📍 ${personalInfo.location}\n`;
+      if (personalInfo.email) md += `- ✉️ ${personalInfo.email}\n`;
+      if (personalInfo.linkedin) md += `- 🔗 [LinkedIn](${personalInfo.linkedin})\n`;
+      if (personalInfo.website) md += `- 🌐 [Portfolio](${personalInfo.website})\n`;
+      md += `\n`;
+
+      if (skills.length > 0) {
+        md += `## 🛠 Skills\n`;
+        // Simple badge style for GitHub
+        md += skills.map(s => `![${s.name}](https://img.shields.io/badge/-${encodeURIComponent(s.name)}-333?style=flat)`).join(' ');
+        md += `\n\n`;
+      }
+
+      md += `## 💼 Experience\n`;
+      experience.forEach(exp => {
+        md += `### ${exp.title} @ **${exp.company}**\n`;
+        md += `_${formatRange(exp.startDate, exp.endDate, exp.current)}_\n\n`;
+        md += `${exp.description}\n\n`;
+      });
+
+      if (education.length > 0) {
+        md += `## 🎓 Education\n`;
+        education.forEach(edu => {
+          md += `- **${edu.school}**: ${edu.degree} (${edu.year})\n`;
+        });
+        md += `\n`;
+      }
+      
+      navigator.clipboard.writeText(md);
+      alert("GitHub Profile README copied to clipboard! You can paste this into your profile/README.md");
   };
 
   // --- SUB-COMPONENTS FOR SECTIONS TO REDUCE REPETITION ---
@@ -576,6 +619,16 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
                 >
                     <Sparkles size={16} /> {t.headhunter}
                 </button>
+                
+                {/* GITHUB EXPORT BUTTON (New Feature) */}
+                <button 
+                    onClick={handleGithubExport}
+                    className="bg-slate-900 hover:bg-black text-white px-4 py-3 rounded-lg font-bold shadow-lg border border-slate-600 transition-all flex items-center gap-2"
+                    title="Export for GitHub Profile"
+                >
+                    <Github size={16} /> <span className="hidden sm:inline">Copy MD</span>
+                </button>
+
                 <button 
                     onClick={onDownload}
                     className="text-white px-6 py-3 rounded-lg font-bold shadow-lg shadow-orange-500/30 transition-all flex items-center gap-2"
