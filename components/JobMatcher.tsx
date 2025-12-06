@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ResumeData, JobOpportunity, LangCode, Skill } from '../types';
 import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep, tailorResume } from '../services/geminiService';
 import { content } from '../locales';
-import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap, Wand2, Zap } from 'lucide-react';
+import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap, Wand2, Zap, Undo2 } from 'lucide-react';
 
 interface JobMatcherProps {
   resumeData: ResumeData;
@@ -29,6 +29,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
   const [prepData, setPrepData] = useState<any[] | null>(null);
   const [prepJobTitle, setPrepJobTitle] = useState<string>("");
 
+  const [backupData, setBackupData] = useState<ResumeData | null>(null);
+
   const t = content[lang].jobs;
   
   // Use jobs from resumeData or empty array
@@ -43,7 +45,10 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
 
   useEffect(() => {
       if (tailorSuccess) {
-          const timer = setTimeout(() => setTailorSuccess(null), 3000);
+          const timer = setTimeout(() => {
+              // Only auto-clear if we haven't undid it already
+              if (tailorSuccess) setTailorSuccess(null);
+          }, 6000); // Give user 6 seconds to undo
           return () => clearTimeout(timer);
       }
   }, [tailorSuccess]);
@@ -136,16 +141,17 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
   };
 
   const handleTailorCv = async (job: JobOpportunity) => {
+      setBackupData(JSON.parse(JSON.stringify(resumeData))); // Deep copy for backup
       setIsTailoring(job.id);
       try {
           const result = await tailorResume(resumeData, job.title, job.company, lang);
           
           if (result && result.summary) {
               const newSkills: Skill[] = Array.isArray(result.skills) 
-                ? result.skills.map((s: string) => ({
+                ? result.skills.map((s: any) => ({
                     id: Math.random().toString(36).substr(2, 9),
-                    name: s,
-                    level: 'Intermediate'
+                    name: typeof s === 'string' ? s : s.name, 
+                    level: (typeof s === 'object' && s.level) ? s.level as any : 'Intermediate'
                   }))
                 : [];
 
@@ -168,6 +174,16 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
           console.error(e);
       } finally {
           setIsTailoring(null);
+      }
+  };
+
+  const handleUndoTailor = (e: React.MouseEvent) => {
+      e.stopPropagation();
+      if (backupData) {
+          onUpdateData(backupData);
+          setTailorSuccess(null);
+          setBackupData(null);
+          // Optional: Show "Undone" toast logic here if needed
       }
   };
 
@@ -283,22 +299,31 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
                                     {t.prep}
                                 </button>
                                 
-                                <button 
-                                    onClick={() => handleTailorCv(job)}
-                                    disabled={isTailoring === job.id || tailorSuccess === job.id}
-                                    className={`text-xs font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all ${
-                                        tailorSuccess === job.id 
-                                        ? 'bg-green-100 text-green-700 border-green-200'
-                                        : 'text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 border-orange-200'
-                                    }`}
-                                >
-                                    {tailorSuccess === job.id 
-                                        ? <><CheckCircle size={12}/> {t.tailorSuccess}</>
-                                        : isTailoring === job.id 
+                                {tailorSuccess === job.id ? (
+                                    <div className="flex items-center gap-1 bg-green-100 border border-green-200 rounded-lg p-0.5 overflow-hidden animate-in fade-in zoom-in duration-300">
+                                        <span className="text-xs font-bold text-green-700 px-2 flex items-center gap-1">
+                                            <CheckCircle size={12}/> {t.tailorSuccess}
+                                        </span>
+                                        <button 
+                                            onClick={handleUndoTailor}
+                                            className="bg-white hover:bg-red-50 text-slate-400 hover:text-red-500 p-1 rounded-md transition-colors border-l border-green-200"
+                                            title="Undo Changes"
+                                        >
+                                            <Undo2 size={12}/>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => handleTailorCv(job)}
+                                        disabled={isTailoring === job.id}
+                                        className="text-xs font-bold text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 px-3 py-1.5 rounded-lg border border-orange-200 flex items-center gap-1.5 transition-all"
+                                    >
+                                        {isTailoring === job.id 
                                             ? <><Loader2 size={12} className="animate-spin"/> {t.tailoring}</>
                                             : <><Zap size={12} className={isTailoring === job.id ? '' : 'fill-orange-500'}/> {t.tailor}</>
-                                    }
-                                </button>
+                                        }
+                                    </button>
+                                )}
                             </div>
                         </div>
                         <div className="flex flex-col justify-center min-w-[200px] pt-4 md:pt-0 md:border-l border-slate-100 md:pl-6">

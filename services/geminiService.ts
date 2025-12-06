@@ -235,7 +235,7 @@ export const generateInterviewPrep = async (title: string, company: string, lang
 };
 
 // --- NEW: RESUME TAILORING ---
-export const tailorResume = async (resumeData: ResumeData, jobTitle: string, company: string, lang: LangCode): Promise<{summary: string, skills: any[]}> => {
+export const tailorResume = async (resumeData: ResumeData, jobTitle: string, company: string, lang: LangCode): Promise<{summary: string, skills: {name: string, level: string}[]}> => {
   const client = getClient();
   try {
     const currentSkills = resumeData.skills.map(s => s.name).join(", ");
@@ -248,13 +248,17 @@ export const tailorResume = async (resumeData: ResumeData, jobTitle: string, com
     Task:
     1. Rewrite the summary to be highly relevant to this specific role and company (max 4 sentences).
     2. Suggest 6 key hard skills that this role likely requires (mix of current skills + 2-3 new relevant keywords).
+    3. For each skill, infer the required proficiency level (Beginner, Intermediate, Expert, Master) based on the job requirements.
     
     Language: ${getLanguageName(lang)}.
     
     Return STRICT JSON:
     {
        "summary": "Rewritten summary...",
-       "skills": ["Skill 1", "Skill 2", ...]
+       "skills": [
+          {"name": "Skill 1", "level": "Expert"},
+          {"name": "Skill 2", "level": "Intermediate"}
+       ]
     }
     `;
 
