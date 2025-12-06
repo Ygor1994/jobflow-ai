@@ -234,6 +234,44 @@ export const generateInterviewPrep = async (title: string, company: string, lang
   }
 };
 
+// --- NEW: RESUME TAILORING ---
+export const tailorResume = async (resumeData: ResumeData, jobTitle: string, company: string, lang: LangCode): Promise<{summary: string, skills: any[]}> => {
+  const client = getClient();
+  try {
+    const currentSkills = resumeData.skills.map(s => s.name).join(", ");
+    const prompt = `You are an expert ATS Optimization specialist.
+    I want to apply for the role of "${jobTitle}" at "${company}".
+    
+    Current Summary: "${resumeData.personalInfo.summary}"
+    Current Skills: "${currentSkills}"
+    
+    Task:
+    1. Rewrite the summary to be highly relevant to this specific role and company (max 4 sentences).
+    2. Suggest 6 key hard skills that this role likely requires (mix of current skills + 2-3 new relevant keywords).
+    
+    Language: ${getLanguageName(lang)}.
+    
+    Return STRICT JSON:
+    {
+       "summary": "Rewritten summary...",
+       "skills": ["Skill 1", "Skill 2", ...]
+    }
+    `;
+
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+
+    const text = extractJSON(response.text || "");
+    return JSON.parse(text);
+  } catch (e) {
+    // Return original data on failure to prevent data loss
+    return { summary: resumeData.personalInfo.summary, skills: [] };
+  }
+};
+
 export const parseResumeFromText = async (text: string): Promise<ResumeData> => {
   const client = getClient();
 

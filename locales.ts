@@ -253,6 +253,9 @@ const enContent = {
     send: 'Send',
     cancel: 'Cancel',
     prep: 'Interview Prep',
+    tailor: 'Tailor CV to Job',
+    tailoring: 'Optimizing CV...',
+    tailorSuccess: 'CV Optimized!',
     search: {
       label: 'Search',
       keywords: 'Keywords',

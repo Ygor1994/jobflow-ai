@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { ResumeData, JobOpportunity, LangCode } from '../types';
-import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep } from '../services/geminiService';
+import { ResumeData, JobOpportunity, LangCode, Skill } from '../types';
+import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep, tailorResume } from '../services/geminiService';
 import { content } from '../locales';
-import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap } from 'lucide-react';
+import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap, Wand2, Zap } from 'lucide-react';
 
 interface JobMatcherProps {
   resumeData: ResumeData;
@@ -16,6 +16,8 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
   const [isPrepping, setIsPrepping] = useState<string | null>(null);
+  const [isTailoring, setIsTailoring] = useState<string | null>(null);
+  const [tailorSuccess, setTailorSuccess] = useState<string | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
@@ -38,6 +40,13 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
         performAutoMatch();
     }
   }, []);
+
+  useEffect(() => {
+      if (tailorSuccess) {
+          const timer = setTimeout(() => setTailorSuccess(null), 3000);
+          return () => clearTimeout(timer);
+      }
+  }, [tailorSuccess]);
 
   const performAutoMatch = async () => {
       setLoading(true);
@@ -123,6 +132,42 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
           alert("Could not generate interview prep.");
       } finally {
           setIsPrepping(null);
+      }
+  };
+
+  const handleTailorCv = async (job: JobOpportunity) => {
+      setIsTailoring(job.id);
+      try {
+          const result = await tailorResume(resumeData, job.title, job.company, lang);
+          
+          if (result && result.summary) {
+              const newSkills: Skill[] = Array.isArray(result.skills) 
+                ? result.skills.map((s: string) => ({
+                    id: Math.random().toString(36).substr(2, 9),
+                    name: s,
+                    level: 'Intermediate'
+                  }))
+                : [];
+
+              // Merge logic: Replace summary, Append new skills if not exist
+              const existingSkillNames = new Set(resumeData.skills.map(s => s.name.toLowerCase()));
+              const filteredNewSkills = newSkills.filter(s => !existingSkillNames.has(s.name.toLowerCase()));
+
+              onUpdateData({
+                  ...resumeData,
+                  personalInfo: {
+                      ...resumeData.personalInfo,
+                      summary: result.summary,
+                      jobTitle: job.title // Also align job title
+                  },
+                  skills: [...resumeData.skills, ...filteredNewSkills]
+              });
+              setTailorSuccess(job.id);
+          }
+      } catch (e) {
+          console.error(e);
+      } finally {
+          setIsTailoring(null);
       }
   };
 
@@ -228,15 +273,33 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData
                                 </p>
                             </div>
                             
-                            {/* NEW: Interview Prep Button */}
-                            <button 
-                                onClick={() => handleInterviewPrep(job)}
-                                disabled={isPrepping === job.id}
-                                className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg border border-violet-200 flex items-center gap-1.5 transition-colors w-fit"
-                            >
-                                {isPrepping === job.id ? <Loader2 size={12} className="animate-spin"/> : <MessageSquare size={12}/>}
-                                {t.prep}
-                            </button>
+                            <div className="flex flex-wrap gap-2 mt-3">
+                                <button 
+                                    onClick={() => handleInterviewPrep(job)}
+                                    disabled={isPrepping === job.id}
+                                    className="text-xs font-bold text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg border border-violet-200 flex items-center gap-1.5 transition-colors"
+                                >
+                                    {isPrepping === job.id ? <Loader2 size={12} className="animate-spin"/> : <MessageSquare size={12}/>}
+                                    {t.prep}
+                                </button>
+                                
+                                <button 
+                                    onClick={() => handleTailorCv(job)}
+                                    disabled={isTailoring === job.id || tailorSuccess === job.id}
+                                    className={`text-xs font-bold px-3 py-1.5 rounded-lg border flex items-center gap-1.5 transition-all ${
+                                        tailorSuccess === job.id 
+                                        ? 'bg-green-100 text-green-700 border-green-200'
+                                        : 'text-orange-600 hover:text-orange-700 bg-orange-50 hover:bg-orange-100 border-orange-200'
+                                    }`}
+                                >
+                                    {tailorSuccess === job.id 
+                                        ? <><CheckCircle size={12}/> {t.tailorSuccess}</>
+                                        : isTailoring === job.id 
+                                            ? <><Loader2 size={12} className="animate-spin"/> {t.tailoring}</>
+                                            : <><Zap size={12} className={isTailoring === job.id ? '' : 'fill-orange-500'}/> {t.tailor}</>
+                                    }
+                                </button>
+                            </div>
                         </div>
                         <div className="flex flex-col justify-center min-w-[200px] pt-4 md:pt-0 md:border-l border-slate-100 md:pl-6">
                              {job.applied ? (
