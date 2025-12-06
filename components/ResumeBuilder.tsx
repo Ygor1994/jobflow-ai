@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { ResumeData, Experience, Education, Skill, Language, Course, Interest, Reference, LangCode } from '../types';
 import { Plus, Trash2, Wand2, Loader2, ChevronRight, ChevronLeft, User, Briefcase, GraduationCap, Wrench, Globe, Award, Heart, Users, LayoutGrid, MailOpen, Crown, Upload, X, Check, Layers, ArrowLeft, Sparkles } from 'lucide-react';

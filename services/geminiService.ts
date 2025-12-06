@@ -1,10 +1,8 @@
-
 import { GoogleGenAI } from "@google/genai";
 import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA } from "../types";
 
 const getClient = () => {
   // Fixed: Use process.env.API_KEY exclusively as per guidelines.
-  // This ensures compatibility and fixes the 'ImportMeta' type error.
   return new GoogleGenAI({ apiKey: process.env.API_KEY });
 };
 
@@ -136,7 +134,7 @@ export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): 
         return jobs.map((j: any) => ({ ...j, id: Math.random().toString(36).substr(2, 9) }));
     } catch (e) {
         console.warn("JSON Parse failed, returning empty list or falling back", text);
-        return [];
+        return searchJobs(targetRole, location, lang);
     }
 
   } catch (error) {
