@@ -169,6 +169,7 @@ const App: React.FC = () => {
       {state === AppState.JOBS && (
         <JobMatcher 
            resumeData={resumeData} 
+           onUpdateData={setResumeData}
            lang={lang} 
            onBack={() => setState(AppState.PREVIEW)} 
         />

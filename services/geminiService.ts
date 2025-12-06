@@ -24,6 +24,31 @@ const getLanguageName = (lang: LangCode) => {
   }
 };
 
+// Helper to extract JSON from markdown or conversational text
+const extractJSON = (text: string): string => {
+    if (!text) return "[]";
+    
+    // 1. Try to find a JSON code block
+    const codeBlockMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/);
+    if (codeBlockMatch) {
+        return codeBlockMatch[1];
+    }
+    
+    // 2. Try to find an array pattern [...]
+    const arrayMatch = text.match(/\[[\s\S]*\]/);
+    if (arrayMatch) {
+        return arrayMatch[0];
+    }
+    
+    // 3. Try to find an object pattern {...}
+    const objectMatch = text.match(/\{[\s\S]*\}/);
+    if (objectMatch) {
+        return objectMatch[0];
+    }
+
+    return text;
+};
+
 export const generateSummary = async (jobTitle: string, experienceStr: string, lang: LangCode): Promise<string> => {
   const client = getClient();
   try {
@@ -123,15 +148,12 @@ export const findMatchingJobs = async (resumeData: ResumeData, lang: LangCode): 
       }
     });
 
-    let text = response.text || "[]";
-    // Clean markdown if present
-    if (text.startsWith('```json')) text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
-    else if (text.startsWith('```')) text = text.replace(/^```\n/, '').replace(/\n```$/, '');
+    const text = extractJSON(response.text || "");
 
-    // Attempt to parse JSON. If Google Search returns text mixed with JSON, this might fail, so we try/catch.
+    // Attempt to parse JSON.
     try {
         const jobs = JSON.parse(text);
-        return jobs.map((j: any) => ({ ...j, id: Math.random().toString(36).substr(2, 9) }));
+        return Array.isArray(jobs) ? jobs.map((j: any) => ({ ...j, id: Math.random().toString(36).substr(2, 9) })) : [];
     } catch (e) {
         console.warn("JSON Parse failed, returning empty list or falling back", text);
         return searchJobs(targetRole, location, lang);
@@ -162,12 +184,9 @@ export const searchJobs = async (query: string, location: string, lang: LangCode
       }
     });
 
-    let text = response.text || "[]";
-    if (text.startsWith('```json')) text = text.replace(/^```json\n/, '').replace(/\n```$/, '');
-    else if (text.startsWith('```')) text = text.replace(/^```\n/, '').replace(/\n```$/, '');
-
+    const text = extractJSON(response.text || "");
     const jobs = JSON.parse(text);
-    return jobs.map((j: any) => ({ ...j, id: Math.random().toString(36).substr(2, 9) }));
+    return Array.isArray(jobs) ? jobs.map((j: any) => ({ ...j, id: Math.random().toString(36).substr(2, 9) })) : [];
   } catch (error) {
     console.error("Gemini Job Search Error:", error);
     return [];
@@ -191,6 +210,30 @@ export const draftCoverLetter = async (job: JobOpportunity, resumeData: ResumeDa
   }
 };
 
+export const generateInterviewPrep = async (title: string, company: string, lang: LangCode): Promise<any[]> => {
+  const client = getClient();
+  try {
+    const prompt = `You are an expert interview coach. Generate 3 likely interview questions for a "${title}" role at "${company}".
+    Language: ${getLanguageName(lang)}.
+    Return STRICT JSON array with objects containing:
+    - question (The question text)
+    - whyItIsAsked (The hidden intent behind the question, max 1 sentence)
+    - answerTip (A specific tip on how to answer using the STAR method, max 2 sentences)
+    `;
+
+    const response = await client.models.generateContent({
+      model: 'gemini-2.5-flash',
+      contents: prompt,
+      config: { responseMimeType: "application/json" }
+    });
+
+    const text = extractJSON(response.text || "");
+    return JSON.parse(text);
+  } catch (e) {
+    return [];
+  }
+};
+
 export const parseResumeFromText = async (text: string): Promise<ResumeData> => {
   const client = getClient();
 
@@ -205,10 +248,7 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
       config: { responseMimeType: "application/json" }
     });
 
-    let extractedText = response.text || "{}";
-    if (extractedText.startsWith('```json')) extractedText = extractedText.replace(/^```json\n/, '').replace(/\n```$/, '');
-    else if (extractedText.startsWith('```')) extractedText = extractedText.replace(/^```\n/, '').replace(/\n```$/, '');
-
+    const extractedText = extractJSON(response.text || "");
     const extracted = JSON.parse(extractedText);
     
     return {

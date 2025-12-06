@@ -252,11 +252,20 @@ const enContent = {
     edit_label: 'Edit Letter',
     send: 'Send',
     cancel: 'Cancel',
+    prep: 'Interview Prep',
     search: {
       label: 'Search',
       keywords: 'Keywords',
       location: 'Location',
       btn: 'Search'
+    },
+    interview: {
+        title: 'Interview Coach',
+        loading: 'Generating questions for this role...',
+        question: 'Question',
+        why: 'The hidden intent',
+        tip: 'Winning answer tip',
+        close: 'Close'
     }
   },
   payment: {
@@ -402,4 +411,3 @@ export const content = {
     }
   }
 };
-    

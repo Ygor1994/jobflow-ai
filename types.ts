@@ -79,6 +79,7 @@ export interface ResumeData {
     companyAddress: string;
     body: string;
   };
+  jobMatches: JobOpportunity[]; // Added for persistence
   meta: {
     accentColor: string;
     template: 'modern' | 'professional' | 'elegant' | 'creative' | 'minimal';
@@ -94,6 +95,8 @@ export interface JobOpportunity {
   salaryRange: string;
   reason: string;
   hrEmail: string;
+  url?: string;
+  applied?: boolean; // Track application status
 }
 
 export const INITIAL_RESUME_DATA: ResumeData = {
@@ -125,6 +128,7 @@ export const INITIAL_RESUME_DATA: ResumeData = {
     companyAddress: '',
     body: '',
   },
+  jobMatches: [],
   meta: {
     accentColor: '#2563eb', // Default Blue
     template: 'modern'

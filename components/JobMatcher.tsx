@@ -1,21 +1,21 @@
 import React, { useEffect, useState } from 'react';
 import { ResumeData, JobOpportunity, LangCode } from '../types';
-import { findMatchingJobs, draftCoverLetter, searchJobs } from '../services/geminiService';
+import { findMatchingJobs, draftCoverLetter, searchJobs, generateInterviewPrep } from '../services/geminiService';
 import { content } from '../locales';
-import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe } from 'lucide-react';
+import { Loader2, Briefcase, MapPin, CheckCircle, Send, Sparkles, Building2, Euro, ArrowLeft, Frown, X, Edit3, Search, ExternalLink, Globe, RotateCcw, Save, MessageSquare, Lightbulb, GraduationCap } from 'lucide-react';
 
 interface JobMatcherProps {
   resumeData: ResumeData;
+  onUpdateData: (data: ResumeData) => void;
   lang: LangCode;
   onBack: () => void;
 }
 
-export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack }) => {
-  const [loading, setLoading] = useState(true);
-  const [jobs, setJobs] = useState<JobOpportunity[]>([]);
+export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, onUpdateData, lang, onBack }) => {
+  const [loading, setLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState<string | null>(null);
   const [applyingTo, setApplyingTo] = useState<string | null>(null);
-  const [appliedJobs, setAppliedJobs] = useState<Set<string>>(new Set());
+  const [isPrepping, setIsPrepping] = useState<string | null>(null);
   
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLocation, setSearchLocation] = useState('');
@@ -24,39 +24,60 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
   const [editingJob, setEditingJob] = useState<JobOpportunity | null>(null);
   const [letterDraft, setLetterDraft] = useState("");
 
+  const [prepData, setPrepData] = useState<any[] | null>(null);
+  const [prepJobTitle, setPrepJobTitle] = useState<string>("");
+
   const t = content[lang].jobs;
+  
+  // Use jobs from resumeData or empty array
+  const jobs = resumeData.jobMatches || [];
 
   useEffect(() => {
-    let mounted = true;
-    const fetchJobs = async () => {
+    // Only fetch automatically if we have NO jobs saved
+    if (jobs.length === 0 && !loading) {
+        performAutoMatch();
+    }
+  }, []);
+
+  const performAutoMatch = async () => {
       setLoading(true);
-      await new Promise(r => setTimeout(r, 1000));
-      const foundJobs = await findMatchingJobs(resumeData, lang);
-      if (mounted) {
-        setJobs(foundJobs);
+      try {
+        const foundJobs = await findMatchingJobs(resumeData, lang);
+        onUpdateData({ ...resumeData, jobMatches: foundJobs });
+      } catch (e) {
+          console.error(e);
+      } finally {
         setLoading(false);
       }
-    };
-    fetchJobs();
-    return () => { mounted = false; };
-  }, [resumeData, lang]);
+  };
+
+  const handleRefresh = () => {
+      performAutoMatch();
+  };
 
   const handleManualSearch = async (e: React.FormEvent) => {
       e.preventDefault();
       if (!searchQuery && !searchLocation) return;
       setIsSearching(true);
-      const foundJobs = await searchJobs(searchQuery, searchLocation, lang);
-      setJobs(foundJobs);
-      setIsSearching(false);
+      try {
+          const foundJobs = await searchJobs(searchQuery, searchLocation, lang);
+          // Prepend new search results to existing matches
+          onUpdateData({ ...resumeData, jobMatches: [...foundJobs, ...jobs] });
+      } finally {
+          setIsSearching(false);
+      }
+  };
+
+  const markAsApplied = (jobId: string) => {
+      const updatedJobs = jobs.map(j => j.id === jobId ? { ...j, applied: true } : j);
+      onUpdateData({ ...resumeData, jobMatches: updatedJobs });
   };
 
   const handleStartApply = async (job: JobOpportunity) => {
     if (job.url) {
-        // If it's a real job with a URL, open it
         window.open(job.url, '_blank');
-        setAppliedJobs(prev => new Set(prev).add(job.id));
+        markAsApplied(job.id);
     } else {
-        // Fallback to email drafting for manual/simulated jobs
         setIsGenerating(job.id);
         const draft = await draftCoverLetter(job, resumeData, lang);
         setLetterDraft(draft);
@@ -70,8 +91,39 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
     setApplyingTo(editingJob.id);
     setEditingJob(null);
     await new Promise(r => setTimeout(r, 1500));
-    setAppliedJobs(prev => new Set(prev).add(editingJob.id));
+    markAsApplied(editingJob.id);
     setApplyingTo(null);
+  };
+
+  const handleSaveToResume = () => {
+      if (!editingJob) return;
+      
+      onUpdateData({
+          ...resumeData,
+          coverLetter: {
+              ...resumeData.coverLetter,
+              companyName: editingJob.company,
+              recipientName: "Hiring Manager", 
+              body: letterDraft
+          }
+      });
+      
+      setEditingJob(null);
+      markAsApplied(editingJob.id);
+      onBack(); // Go back to preview so they can see/download it
+  };
+
+  const handleInterviewPrep = async (job: JobOpportunity) => {
+      setIsPrepping(job.id);
+      setPrepJobTitle(`${job.title} @ ${job.company}`);
+      try {
+          const questions = await generateInterviewPrep(job.title, job.company, lang);
+          setPrepData(questions);
+      } catch (e) {
+          alert("Could not generate interview prep.");
+      } finally {
+          setIsPrepping(null);
+      }
   };
 
   if (loading) {
@@ -94,9 +146,14 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
   return (
     <div className="min-h-screen bg-slate-50 p-4 md:p-8 font-sans relative">
       <div className="max-w-5xl mx-auto">
-        <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 mb-6 font-medium transition-colors group">
-            <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> Back to Resume
-        </button>
+        <div className="flex justify-between items-center mb-6">
+            <button onClick={onBack} className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-medium transition-colors group">
+                <ArrowLeft size={20} className="group-hover:-translate-x-1 transition-transform"/> Back to Resume
+            </button>
+            <button onClick={handleRefresh} className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-bold text-sm bg-blue-50 px-4 py-2 rounded-lg hover:bg-blue-100 transition-colors">
+                <RotateCcw size={16}/> Refresh Matches
+            </button>
+        </div>
 
         <div className="mb-8">
             <div className="flex items-center gap-3 mb-2">
@@ -130,6 +187,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
              <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4 text-slate-400"><Frown size={32} /></div>
              <h3 className="text-xl font-bold text-slate-800 mb-2">No active jobs found</h3>
              <p className="text-slate-500 max-w-md mx-auto mb-6">Try adjusting your search keywords or location.</p>
+             <button onClick={handleRefresh} className="bg-slate-900 text-white px-6 py-3 rounded-xl font-bold hover:bg-slate-800 transition-colors">Run AI Search Again</button>
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 animate-in slide-in-from-bottom-8 duration-500">
@@ -169,9 +227,19 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
                                     <span><span className="font-bold text-slate-900">{t.why}</span> {job.reason}</span>
                                 </p>
                             </div>
+                            
+                            {/* NEW: Interview Prep Button */}
+                            <button 
+                                onClick={() => handleInterviewPrep(job)}
+                                disabled={isPrepping === job.id}
+                                className="mt-3 text-xs font-bold text-violet-600 hover:text-violet-700 bg-violet-50 hover:bg-violet-100 px-3 py-1.5 rounded-lg border border-violet-200 flex items-center gap-1.5 transition-colors w-fit"
+                            >
+                                {isPrepping === job.id ? <Loader2 size={12} className="animate-spin"/> : <MessageSquare size={12}/>}
+                                {t.prep}
+                            </button>
                         </div>
                         <div className="flex flex-col justify-center min-w-[200px] pt-4 md:pt-0 md:border-l border-slate-100 md:pl-6">
-                             {appliedJobs.has(job.id) ? (
+                             {job.applied ? (
                                 <div className="w-full bg-green-50 text-green-700 border border-green-200 py-3 rounded-lg font-bold flex items-center justify-center gap-2 cursor-default animate-in zoom-in duration-300"><CheckCircle size={20} /> {t.applied}</div>
                              ) : (
                                 <button 
@@ -195,7 +263,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
                                     }
                                 </button>
                              )}
-                             {job.url && <div className="text-xs text-center text-slate-400 mt-2 font-medium flex items-center justify-center gap-1"><ExternalLink size={10}/> Direct Link</div>}
+                             {job.url && !job.applied && <div className="text-xs text-center text-slate-400 mt-2 font-medium flex items-center justify-center gap-1"><ExternalLink size={10}/> Direct Link</div>}
                         </div>
                     </div>
                 </div>
@@ -203,6 +271,7 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
           </div>
         )}
 
+        {/* --- MODAL: EDIT COVER LETTER --- */}
         {editingJob && !editingJob.url && (
             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
                 <div className="absolute inset-0 bg-slate-900/70 backdrop-blur-sm" onClick={() => setEditingJob(null)}></div>
@@ -216,13 +285,64 @@ export const JobMatcher: React.FC<JobMatcherProps> = ({ resumeData, lang, onBack
                          <label className="block text-xs font-bold uppercase text-slate-400 mb-2">{t.edit_label}</label>
                          <textarea className="w-full h-64 p-4 border border-slate-200 rounded-lg text-sm text-slate-700 leading-relaxed focus:ring-2 focus:ring-blue-500 outline-none resize-none bg-slate-50" value={letterDraft} onChange={(e) => setLetterDraft(e.target.value)} />
                     </div>
-                    <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-end gap-3">
-                        <button onClick={() => setEditingJob(null)} className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium text-sm">{t.cancel}</button>
-                        <button onClick={handleSendApplication} className="px-6 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-bold text-sm shadow-lg shadow-blue-500/20 flex items-center gap-2"><Send size={16} /> {t.send}</button>
+                    <div className="p-4 border-t border-slate-200 bg-slate-50 flex justify-between gap-3">
+                         <button onClick={handleSaveToResume} className="px-4 py-2 text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg font-bold text-sm flex items-center gap-2 transition-colors">
+                            <Save size={16} /> Save to Resume & PDF
+                         </button>
+                         <div className="flex gap-2">
+                             <button onClick={() => setEditingJob(null)} className="px-4 py-2 text-slate-600 hover:text-slate-800 font-medium text-sm">{t.cancel}</button>
+                             <button onClick={handleSendApplication} className="px-6 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-bold text-sm shadow-lg flex items-center gap-2"><Send size={16} /> {t.send}</button>
+                         </div>
                     </div>
                 </div>
             </div>
         )}
+
+        {/* --- MODAL: INTERVIEW PREP --- */}
+        {prepData && (
+             <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                 <div className="absolute inset-0 bg-slate-900/80 backdrop-blur-sm" onClick={() => setPrepData(null)}></div>
+                 <div className="relative bg-white rounded-3xl shadow-2xl w-full max-w-2xl max-h-[85vh] overflow-hidden flex flex-col animate-in slide-in-from-bottom-10 duration-300">
+                     <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-6 text-white flex justify-between items-start shrink-0">
+                         <div>
+                             <h3 className="text-2xl font-bold flex items-center gap-2"><GraduationCap size={24}/> {t.interview.title}</h3>
+                             <p className="text-violet-200 text-sm mt-1">{prepJobTitle}</p>
+                         </div>
+                         <button onClick={() => setPrepData(null)} className="bg-white/10 hover:bg-white/20 p-2 rounded-full transition-colors"><X size={20}/></button>
+                     </div>
+                     <div className="p-6 overflow-y-auto custom-scrollbar">
+                         {prepData.map((item, idx) => (
+                             <div key={idx} className="mb-6 last:mb-0 border border-slate-100 rounded-2xl p-5 bg-slate-50 hover:bg-white hover:shadow-lg transition-all duration-300 group">
+                                 <h4 className="font-bold text-lg text-slate-800 mb-3 flex gap-3">
+                                     <span className="flex-shrink-0 w-8 h-8 bg-violet-100 text-violet-600 rounded-lg flex items-center justify-center font-bold text-sm">{idx + 1}</span>
+                                     {item.question}
+                                 </h4>
+                                 <div className="space-y-3 pl-11">
+                                    <div className="flex gap-3">
+                                        <div className="mt-0.5"><Search size={16} className="text-slate-400" /></div>
+                                        <div>
+                                            <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t.interview.why}</span>
+                                            <p className="text-slate-600 text-sm leading-relaxed">{item.whyItIsAsked}</p>
+                                        </div>
+                                    </div>
+                                    <div className="flex gap-3">
+                                        <div className="mt-0.5"><Lightbulb size={16} className="text-yellow-500" /></div>
+                                        <div>
+                                            <span className="text-xs font-bold text-yellow-600 uppercase tracking-wider">{t.interview.tip}</span>
+                                            <p className="text-slate-800 font-medium text-sm leading-relaxed bg-yellow-50 p-3 rounded-xl border border-yellow-100">{item.answerTip}</p>
+                                        </div>
+                                    </div>
+                                 </div>
+                             </div>
+                         ))}
+                     </div>
+                     <div className="p-4 border-t border-slate-100 bg-slate-50 shrink-0 flex justify-end">
+                         <button onClick={() => setPrepData(null)} className="px-6 py-2 bg-slate-900 text-white rounded-lg font-bold hover:bg-slate-800 transition-colors">{t.interview.close}</button>
+                     </div>
+                 </div>
+             </div>
+        )}
+
       </div>
     </div>
   );
