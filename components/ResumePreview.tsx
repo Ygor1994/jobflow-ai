@@ -35,6 +35,7 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
   const [view, setView] = useState<'cv' | 'letter'>('cv');
   const [accentColor, setAccentColor] = useState(data.meta.accentColor || '#2563eb');
   const [template, setTemplate] = useState<string>(data.meta.template || 'modern');
+  const [copySuccess, setCopySuccess] = useState(false);
   
   // Audit State
   const [showAudit, setShowAudit] = useState(false);
@@ -128,7 +129,8 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
       }
       
       navigator.clipboard.writeText(md);
-      alert("GitHub Profile README copied to clipboard! You can paste this into your profile/README.md");
+      setCopySuccess(true);
+      setTimeout(() => setCopySuccess(false), 2500);
   };
 
   // --- SUB-COMPONENTS FOR SECTIONS TO REDUCE REPETITION ---
@@ -623,10 +625,11 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
                 {/* GITHUB EXPORT BUTTON (New Feature) */}
                 <button 
                     onClick={handleGithubExport}
-                    className="bg-slate-900 hover:bg-black text-white px-4 py-3 rounded-lg font-bold shadow-lg border border-slate-600 transition-all flex items-center gap-2"
+                    className={`text-white px-4 py-3 rounded-lg font-bold shadow-lg border border-slate-600 transition-all flex items-center gap-2 ${copySuccess ? 'bg-green-600 border-green-500' : 'bg-slate-900 hover:bg-black'}`}
                     title="Export for GitHub Profile"
                 >
-                    <Github size={16} /> <span className="hidden sm:inline">Copy MD</span>
+                    {copySuccess ? <Check size={16} /> : <Github size={16} />} 
+                    <span className="hidden sm:inline">{copySuccess ? 'Copied!' : 'Copy MD'}</span>
                 </button>
 
                 <button 

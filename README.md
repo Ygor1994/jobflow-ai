@@ -1,6 +1,8 @@
 
 # JobFlow AI - Benelux Edition 🇳🇱🇧🇪
 
+![CI](https://github.com/Ygor1994/jobflow-ai/actions/workflows/main.yml/badge.svg)
+
 This is a Premium AI Resume Builder & Headhunter SaaS optimized for the Netherlands and Belgium market.
 
 ## 🚀 Quick Start
@@ -21,6 +23,15 @@ This is a Premium AI Resume Builder & Headhunter SaaS optimized for the Netherla
    ```bash
    npm run dev
    ```
+
+## 🐙 GitHub Profile Export Feature (New!)
+
+This app helps developers stand out by generating a perfect `README.md` for their GitHub profile.
+
+1. Create your resume in the app.
+2. Go to the **Preview** step.
+3. Click the **Copy MD** button (GitHub icon).
+4. Paste the content into your GitHub special repository (e.g., `username/username`).
 
 ## 💰 Stripe Configuration (Critical for Revenue)
 
@@ -44,5 +55,6 @@ To start receiving the €9.90/month subscription:
 
 - **AI Resume Builder**: Optimized for Benelux (Photo, DOB, Driving License).
 - **AI Headhunter**: Matches CV to 500+ jobs and auto-drafts cover letters.
+- **GitHub Profile Generator**: One-click export to Markdown.
 - **Premium Subscription**: €9.90/month via Stripe.
 - **Multi-language**: Full English (EN), Dutch (NL), Spanish (ES), and Portuguese (PT) support.
