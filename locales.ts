@@ -218,6 +218,7 @@ const enContent = {
     mode: 'Preview',
     download: 'Download PDF',
     headhunter: 'AI Headhunter',
+    audit: 'AI Audit',
     viewCv: 'CV',
     viewLetter: 'Letter',
     customize: 'Color',
@@ -237,6 +238,14 @@ const enContent = {
       license: 'License',
       present: 'Present',
       refRequest: 'References on request'
+    },
+    auditModal: {
+      title: 'AI Resume Audit',
+      score: 'ATS Score',
+      analyzing: 'Analyzing your resume...',
+      strengths: 'Strengths',
+      improvements: 'Improvements Needed',
+      close: 'Close'
     }
   },
   jobs: {
@@ -300,117 +309,14 @@ export const content = {
   en: enContent,
   nl: {
     ...enContent,
-    landing: {
-      ...enContent.landing,
-      nav: { home: 'Home', features: 'Functies', pricing: 'Prijzen', contact: 'Contact', create: 'Start Nu', login: 'Login' },
-      hero: {
-        badge: '#1 CV Maker in Europa',
-        title: 'Maak Professionele CVs voor',
-        titleHighlight: 'Benelux met AI',
-        subtitle: 'Bouw CVs geoptimaliseerd voor Nederland en België in minuten. Inclusief professionele sjablonen en directe PDF export.',
-        cta: 'Start Nu',
-        update_cta: 'CV Updaten',
-        import_cta: 'Importeer PDF',
-        importing: 'Lezen...',
-        socialProof: 'Gebruikt door 10.000+ mensen'
-      },
-      features: {
-        templates: { title: 'Professionele Sjablonen', desc: 'Kies uit moderne, creatieve of zakelijke ontwerpen.' },
-        export: { title: 'Exporteer naar PDF', desc: 'Download je CV direct in hoge kwaliteit PDF formaat.' },
-        ai: { title: 'AI Content Generator', desc: 'Onze AI schrijft professionele samenvattingen voor jou.' }
-      },
-      pricing: {
-        ...enContent.landing.pricing,
-        title: 'Eenvoudige Prijzen',
-        subtitle: 'Kies het plan dat bij je past.',
-        free: { ...enContent.landing.pricing.free, name: 'Gratis', cta: 'Start Gratis', desc: 'Goed voor het maken en bekijken.' },
-        premium: { ...enContent.landing.pricing.premium, name: 'Pro', cta: 'Start Premium', desc: 'Volledige toegang + downloads.' }
-      },
-      testimonials: {
-          ...enContent.landing.testimonials,
-          title: 'Succesverhalen',
-          subtitle: 'Zie voorbeelden van succes van onze gebruikers.'
-      }
-    },
-    builder: {
-        ...enContent.builder,
-        personal: { ...enContent.builder.personal, photoHelp: 'Upload (Max 25MB)' }
-    }
+    preview: { ...enContent.preview, audit: 'AI Audit', auditModal: { ...enContent.preview.auditModal, title: 'AI CV Check', analyzing: 'CV analyseren...', improvements: 'Verbeterpunten', strengths: 'Sterke punten' } }
   },
   es: {
     ...enContent,
-    landing: {
-        ...enContent.landing,
-        nav: { home: 'Inicio', features: 'Recursos', pricing: 'Precios', contact: 'Contacto', create: 'Empezar', login: 'Entrar' },
-        hero: {
-            badge: '#1 Creador de CV con IA',
-            title: 'Crea Currículos Profissionais para',
-            titleHighlight: 'Benelux con IA',
-            subtitle: 'Crea CVs optimizados para Europa en minutos. Incluye plantillas profesionales y exportación a PDF instantánea.',
-            cta: 'Empezar Ahora',
-            update_cta: 'Actualizar CV',
-            import_cta: 'Importar PDF',
-            importing: 'Leyendo...',
-            socialProof: 'Usado por 10.000+ profesionales'
-        },
-        features: {
-            templates: { title: 'Plantillas Profesionales', desc: 'Elige diseños modernos optimizados para ATS.' },
-            export: { title: 'Exportar a PDF', desc: 'Descarga tu currículo en alta calidad PDF al instante.' },
-            ai: { title: 'Generador IA', desc: 'Nuestra IA escribe resúmenes profesionales por ti.' }
-        },
-        pricing: {
-            ...enContent.landing.pricing,
-            title: 'Precios Simples',
-            free: { ...enContent.landing.pricing.free, name: 'Gratis', cta: 'Empezar Gratis' },
-            premium: { ...enContent.landing.pricing.premium, name: 'Pro', cta: 'Empezar Premium' }
-        },
-        testimonials: {
-            ...enContent.landing.testimonials,
-            title: 'Historias de Éxito',
-            subtitle: 'Ejemplos reales de nuestros usuarios.'
-        }
-    },
-    builder: {
-        ...enContent.builder,
-        personal: { ...enContent.builder.personal, photoHelp: 'Subir (Max 25MB)' }
-    }
+    preview: { ...enContent.preview, audit: 'Auditoría IA', auditModal: { ...enContent.preview.auditModal, title: 'Auditoría CV', analyzing: 'Analizando CV...', improvements: 'Mejoras necesarias', strengths: 'Puntos fuertes' } }
   },
   pt: {
     ...enContent,
-    landing: {
-        ...enContent.landing,
-        nav: { home: 'Início', features: 'Recursos', pricing: 'Preços', contact: 'Contacto', create: 'Começar', login: 'Entrar' },
-        hero: {
-            badge: '#1 Criador de CV com IA',
-            title: 'Crie Currículos Profissionais para',
-            titleHighlight: 'Benelux com IA',
-            subtitle: 'Construa CVs otimizados para o mercado de trabalho na Europa em minutos. Inclui templates profissionais e exportação PDF.',
-            cta: 'Começar Agora',
-            update_cta: 'Atualizar CV',
-            import_cta: 'Importar PDF',
-            importing: 'A ler PDF...',
-            socialProof: 'Usado por 10.000+ profissionais'
-        },
-        features: {
-            templates: { title: 'Templates Profissionais', desc: 'Escolha designs modernos, criativos ou corporativos.' },
-            export: { title: 'Exportar para PDF', desc: 'Baixe o seu currículo em formato PDF de alta qualidade instantaneamente.' },
-            ai: { title: 'Gerador de Conteúdo IA', desc: 'A nossa IA escreve resumos profissionais para si.' }
-        },
-        pricing: {
-            ...enContent.landing.pricing,
-            title: 'Preços Simples',
-            free: { ...enContent.landing.pricing.free, name: 'Grátis', cta: 'Começar Grátis' },
-            premium: { ...enContent.landing.pricing.premium, name: 'Pro', cta: 'Começar Premium' }
-        },
-        testimonials: {
-            ...enContent.landing.testimonials,
-            title: 'Histórias de Sucesso',
-            subtitle: 'Veja exemplos de sucesso dos nossos utilizadores.'
-        }
-    },
-    builder: {
-        ...enContent.builder,
-        personal: { ...enContent.builder.personal, photoHelp: 'Carregar (Max 25MB)' }
-    }
+    preview: { ...enContent.preview, audit: 'Auditoria IA', auditModal: { ...enContent.preview.auditModal, title: 'Auditoria de CV', analyzing: 'A analisar CV...', improvements: 'Melhorias necessárias', strengths: 'Pontos fortes' } }
   }
 };

@@ -99,6 +99,13 @@ export interface JobOpportunity {
   applied?: boolean; // Track application status
 }
 
+export interface AuditResult {
+  score: number;
+  summary: string;
+  strengths: string[];
+  improvements: string[];
+}
+
 export const INITIAL_RESUME_DATA: ResumeData = {
   personalInfo: {
     fullName: '',

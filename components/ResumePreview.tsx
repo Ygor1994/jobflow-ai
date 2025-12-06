@@ -1,8 +1,10 @@
 
 import React, { useState } from 'react';
-import { ResumeData, LangCode } from '../types';
-import { MapPin, Phone, Mail, Linkedin, Calendar, Flag, Car, Briefcase, Sparkles, FileText, MailOpen, Palette, Check, Layout } from 'lucide-react';
+import { ResumeData, LangCode, AuditResult } from '../types';
+import { MapPin, Phone, Mail, Linkedin, Calendar, Flag, Car, Briefcase, Sparkles, FileText, MailOpen, Palette, Check, Layout, TrendingUp } from 'lucide-react';
 import { content } from '../locales';
+import { auditResume } from '../services/geminiService';
+import { ResumeAuditModal } from './ResumeAuditModal';
 
 interface ResumePreviewProps {
   data: ResumeData;
@@ -33,6 +35,12 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
   const [view, setView] = useState<'cv' | 'letter'>('cv');
   const [accentColor, setAccentColor] = useState(data.meta.accentColor || '#2563eb');
   const [template, setTemplate] = useState<string>(data.meta.template || 'modern');
+  
+  // Audit State
+  const [showAudit, setShowAudit] = useState(false);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditResult, setAuditResult] = useState<AuditResult | null>(null);
+
   const t = content[lang].preview;
 
   // Helper to update visual state
@@ -44,6 +52,16 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
   const handleTemplateChange = (tmpl: string) => {
       setTemplate(tmpl);
       data.meta.template = tmpl as any;
+  };
+
+  const handleAuditClick = async () => {
+      setShowAudit(true);
+      if (!auditResult) { // Only fetch if we haven't already (simple cache)
+          setAuditLoading(true);
+          const result = await auditResume(data, lang);
+          setAuditResult(result);
+          setAuditLoading(false);
+      }
   };
 
   // --- Smart Date Formatter ---
@@ -544,6 +562,14 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
             </div>
 
             <div className="flex gap-4 items-center">
+                {/* AI Audit Button */}
+                <button 
+                    onClick={handleAuditClick}
+                    className="bg-slate-700 hover:bg-slate-600 text-white px-4 py-3 rounded-lg font-bold shadow-lg transition-all flex items-center gap-2 border border-slate-600 group"
+                >
+                    <TrendingUp size={16} className="text-blue-400 group-hover:text-blue-300" /> {t.audit}
+                </button>
+
                 <button 
                     onClick={onHeadhunter}
                     className="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-3 rounded-lg font-bold shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-2 animate-pulse hover:animate-none"
@@ -606,6 +632,15 @@ export const ResumePreview: React.FC<ResumePreviewProps> = ({ data, onEdit, onDo
                 )}
             </div>
         </div>
+
+        {/* Audit Modal */}
+        <ResumeAuditModal 
+            isOpen={showAudit}
+            onClose={() => setShowAudit(false)}
+            results={auditResult}
+            isLoading={auditLoading}
+            lang={lang}
+        />
     </div>
   );
 };
