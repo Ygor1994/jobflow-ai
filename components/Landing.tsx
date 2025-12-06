@@ -1,4 +1,3 @@
-
 import React, { useRef, useState, useEffect } from 'react';
 import { CheckCircle, ArrowRight, Sparkles, Globe, ShieldCheck, Star, Quote, X, LayoutGrid, Briefcase, Zap, Check, Minus, Lock, Mail, MessageCircle, Upload, Loader2, Pencil, Layers, Cookie, Menu, Linkedin, Twitter, Instagram, Layout, Download, FileText, User, MapPin, Phone, Bot, Crown, Search, TrendingUp, MessageSquare, Send } from 'lucide-react';
 import { LangCode, ResumeData } from '../types';
@@ -209,9 +208,15 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
         <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-emerald-100/50 rounded-full blur-3xl -z-10"></div>
         
         <div className="max-w-6xl mx-auto px-4 text-center relative z-10">
-          <div className="inline-flex items-center gap-2 border px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide mb-8 shadow-sm transition-colors bg-white border-blue-100 text-blue-700">
-            <Sparkles size={14} className="text-emerald-500" fill="currentColor" />
-            {t.hero.badge}
+          
+          <div className="flex flex-col items-center gap-3 mb-8">
+            <div className="inline-flex items-center gap-2 border px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wide shadow-sm transition-colors bg-white border-blue-100 text-blue-700">
+                <Sparkles size={14} className="text-emerald-500" fill="currentColor" />
+                {t.hero.badge}
+            </div>
+            <div className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest bg-slate-100/50 px-3 py-1 rounded-lg">
+                <Zap size={10} className="text-amber-500 fill-amber-500"/> Powered by Gemini 2.0 Flash
+            </div>
           </div>
           
           <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 leading-[1.1] text-slate-900">
