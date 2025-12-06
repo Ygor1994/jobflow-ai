@@ -4,8 +4,6 @@ import react from '@vitejs/plugin-react';
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => {
-  // Load env file based on `mode` in the current working directory.
-  // The third argument '' allows loading variables without the VITE_ prefix from .env files.
   const env = loadEnv(mode, process.cwd(), '');
 
   return {
@@ -15,18 +13,11 @@ export default defineConfig(({ mode }) => {
       sourcemap: false
     },
     define: {
-      // Polyfill process.env for the browser to match Google GenAI SDK requirements
-      // and ensure Vercel environment variables are injected correctly.
-      'process.env': {
-        API_KEY: JSON.stringify(
-          env.API_KEY || 
-          process.env.API_KEY || 
-          env.VITE_API_KEY || 
-          process.env.VITE_API_KEY || 
-          ''
-        ),
-        NODE_ENV: JSON.stringify(mode)
-      }
+      // Garante que process.env exista no navegador e injeta a API Key
+      'process.env': JSON.stringify({
+        API_KEY: env.API_KEY || process.env.API_KEY || '',
+        NODE_ENV: mode
+      })
     }
   };
 });
