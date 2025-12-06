@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA } from "../types";
+import { ResumeData, JobOpportunity, LangCode, INITIAL_RESUME_DATA, AuditResult } from "../types";
 
 const getClient = () => {
   // Fixed: Use process.env.API_KEY exclusively as per guidelines.
@@ -276,13 +276,67 @@ export const tailorResume = async (resumeData: ResumeData, jobTitle: string, com
   }
 };
 
+export const auditResume = async (resumeData: ResumeData, lang: LangCode): Promise<AuditResult | null> => {
+    const client = getClient();
+    try {
+        const prompt = `Act as a senior technical recruiter for the Benelux market (Netherlands, Belgium).
+        Review the following resume data:
+        ${JSON.stringify(resumeData)}
+
+        Analyze it for:
+        1. Action verbs usage.
+        2. Quantification of results (numbers/metrics).
+        3. Clarity and brevity.
+        4. Benelux standards (Directness, professional photo if present).
+
+        Return a STRICT JSON object:
+        {
+            "score": 0-100 (integer),
+            "summary": "A 2 sentence overview of the resume quality.",
+            "strengths": ["Strength 1", "Strength 2", "Strength 3"],
+            "improvements": ["Improvement 1", "Improvement 2", "Improvement 3"]
+        }
+        
+        Language: ${getLanguageName(lang)}.
+        `;
+
+        const response = await client.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt,
+            config: { responseMimeType: "application/json" }
+        });
+
+        const text = extractJSON(response.text || "");
+        return JSON.parse(text);
+    } catch (e) {
+        console.error("Audit failed", e);
+        return null;
+    }
+};
+
 export const parseResumeFromText = async (text: string): Promise<ResumeData> => {
   const client = getClient();
 
   try {
-    const prompt = `Extract resume data from text to JSON.
-    TEXT: "${text.substring(0, 30000)}"
-    SCHEMA: Standard ResumeData schema.`;
+    // UPDATED PROMPT: More robust instructions for messy extracted text
+    const prompt = `Extract resume data from the provided raw text into a JSON object.
+    
+    RAW TEXT: "${text.substring(0, 30000)}"
+    
+    INSTRUCTIONS:
+    - The text might lack newlines or proper formatting. Use context clues to identify sections.
+    - Infer the "summary" if not explicitly labeled.
+    - For "experience", try to split distinct roles even if they run together.
+    - RETURN ONLY JSON.
+
+    SCHEMA:
+    {
+      "personalInfo": { "fullName": "", "email": "", "phone": "", "location": "", "jobTitle": "", "summary": "" },
+      "experience": [{ "title": "", "company": "", "startDate": "YYYY-MM", "endDate": "YYYY-MM", "description": "" }],
+      "education": [{ "school": "", "degree": "", "year": "" }],
+      "skills": [{ "name": "", "level": "Intermediate" }],
+      "languages": [{ "language": "", "proficiency": "Fluent" }]
+    }`;
 
     const response = await client.models.generateContent({
       model: 'gemini-2.5-flash',
@@ -302,6 +356,7 @@ export const parseResumeFromText = async (text: string): Promise<ResumeData> => 
         languages: Array.isArray(extracted.languages) ? extracted.languages.map((e: any) => ({...e, id: Math.random().toString(36).substr(2,9)})) : [],
     };
   } catch (error) {
+    console.error("Resume Parse Error", error);
     return INITIAL_RESUME_DATA;
   }
 };

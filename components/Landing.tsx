@@ -70,7 +70,13 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
       setIsImporting(true);
       try {
           const arrayBuffer = await file.arrayBuffer();
-          if (!window.pdfjsLib) throw new Error("PDF Library not loaded");
+          
+          // CRITICAL FIX: Ensure PDF.js is loaded and Worker is set
+          if (!window.pdfjsLib) {
+              throw new Error("PDF Library not loaded. Please refresh the page.");
+          }
+          // Explicitly set worker again to be safe
+          window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
           
           const pdf = await window.pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           let fullText = '';
@@ -79,18 +85,20 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
               const page = await pdf.getPage(i);
               const textContent = await page.getTextContent();
               
-              // CRITICAL UPDATE: Join with newline (\n) instead of space.
-              // This preserves the visual structure (headers usually on their own lines),
-              // making it much easier for the AI to identify sections.
+              // CRITICAL UPDATE: Join with ' ' (space) instead of newline.
+              // Many PDFs export words as individual items. Joining by \n breaks sentences.
+              // We add double newlines only at the end of pages or major blocks if detectable.
               const pageText = textContent.items
                   .map((item: any) => item.str)
-                  .join('\n');
+                  .join(' '); 
                   
-              fullText += pageText + '\n';
+              fullText += pageText + '\n\n';
           }
 
-          if (fullText.trim().length < 20) {
-              alert("Could not extract enough text from this PDF. It might be an image scan. Please try entering your details manually.");
+          console.log("Extracted Text Length:", fullText.length); // Debug
+
+          if (fullText.trim().length < 50) {
+              alert("Could not extract text. This might be an image-based PDF (scan). Please use a text-based PDF or enter details manually.");
               setIsImporting(false);
               return;
           }
@@ -99,7 +107,7 @@ export const Landing: React.FC<LandingProps> = ({ onStart, onLogin, onLegal, onI
           onImport(parsedData);
       } catch (error) {
           console.error("Import Failed", error);
-          alert("Error reading PDF file. Please try manual creation.");
+          alert("Error reading PDF. Please ensure it is a valid text PDF or try refreshing the page.");
           setIsImporting(false);
       }
   };
